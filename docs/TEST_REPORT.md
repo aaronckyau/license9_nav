@@ -86,7 +86,7 @@ Playwright 使用 bundled Node、`NODE_PATH` 與 Edge executable，`QA_BASE_URL=
 
 ## 年度 NAV 儀表板驗證（2026-07-20）
 
-- `tests/test_imports_models_web.py`：覆蓋上一年度 12 月基準、無基準 fallback、首筆「—」、正負月回報／累積回報、FY／YTD、6 位 NAV、12 個月份、全部編輯 URL、圖表驗證、登入保護、404、no-store 及原有編輯表單。
+- `tests/test_imports_models_web.py`：覆蓋上一年度 12 月基準、無基準 fallback、首筆「—」、缺月不誤標單月回報、待輸入月份排序、正負月回報／累積回報、FY／YTD、6 位 NAV、12 個月份、全部編輯 URL、目標頁及圖表登入保護、404、no-store 及原有編輯表單。
 - 實際 XSQ 本機資料：5 個年度、48 個 NAV 編輯入口及 5 張年度圖表均成功載入；瀏覽器主控台 error 為 0。
 - 1440×1000：摘要／圖表約 32%／68%，六欄表格完整，無水平溢位。
 - 1024×900：摘要改為 2×2，圖表及表格垂直排列，無水平溢位。

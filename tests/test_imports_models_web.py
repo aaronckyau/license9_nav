@@ -428,7 +428,7 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
         inception_nav=Decimal("100"),
         currency="USD",
     )
-    for month, day, value in ((1, 31, "100"), (2, 28, "110"), (3, 31, "99")):
+    for month, day, value in ((1, 31, "100"), (2, 28, "110"), (4, 30, "99")):
         NAVRecord.objects.create(
             share_class=share,
             valuation_month=date(2025, month, day),
@@ -450,6 +450,11 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
     assert year.months[0].monthly_return_display == "—"
     assert year.months[1].monthly_return == Decimal("0.1")
     assert year.months[1].cumulative_return == Decimal("0.1")
+    assert [month.month for month in year.months] == [1, 2, 3, 4]
+    assert year.months[2].is_next is True
+    assert year.months[3].monthly_return is None
+    assert year.months[3].monthly_return_display == "—"
+    assert year.months[3].cumulative_return == Decimal("-0.01")
     assert "無上一年度末 NAV；以 2025 年首筆 NAV 為基準" in response.content.decode()
 
 
@@ -482,6 +487,9 @@ def test_nav_year_chart_and_existing_edit_form_remain_authenticated(client, djan
     )
     chart_url = reverse("nav-year-chart", args=[share.pk, 2025])
 
+    unauthenticated_page = client.get(reverse("simple-entry", args=[share.pk]))
+    assert unauthenticated_page.status_code == 302
+    assert reverse("login") in unauthenticated_page.url
     unauthenticated = client.get(chart_url)
     assert unauthenticated.status_code == 302
     assert reverse("login") in unauthenticated.url

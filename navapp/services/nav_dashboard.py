@@ -71,6 +71,12 @@ def _return_class(value: Decimal | None) -> str:
     return "nav-return-positive" if value > 0 else "nav-return-negative"
 
 
+def _months_are_consecutive(previous: date, current: date) -> bool:
+    previous_index = previous.year * 12 + previous.month
+    current_index = current.year * 12 + current.month
+    return current_index == previous_index + 1
+
+
 def build_nav_dashboard_years(
     records: Iterable[NAVRecord],
     *,
@@ -105,6 +111,10 @@ def build_nav_dashboard_years(
             monthly_return = (
                 record.nav_per_share / prior_record.nav_per_share - Decimal(1)
                 if prior_record
+                and _months_are_consecutive(
+                    prior_record.valuation_month,
+                    record.valuation_month,
+                )
                 else None
             )
             cumulative_return = (
@@ -142,6 +152,7 @@ def build_nav_dashboard_years(
                     is_next=True,
                 )
             )
+            rows.sort(key=lambda row: row.month)
 
         if year_records:
             latest = year_records[-1]
