@@ -7,11 +7,24 @@ from pathlib import Path
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.urls import reverse
+from django.urls import get_script_prefix, reverse, set_script_prefix
 
 from navapp.models import AuditLog, Fund, NAVRecord, QuarterlyReport, ShareClass
 from navapp.services import reports
 from navapp.services.imports import ImportValidationError, parse_legacy_xsq, validate_sequence
+
+
+def test_nav_subpath_reverse_and_cookie_settings(settings):
+    previous_prefix = get_script_prefix()
+    try:
+        set_script_prefix("/nav/")
+        assert reverse("dashboard") == "/nav/"
+        assert reverse("login") == "/nav/accounts/login/"
+        assert reverse("report-history") == "/nav/reports/"
+    finally:
+        set_script_prefix(previous_prefix)
+    assert settings.SESSION_COOKIE_NAME == "nav_sessionid"
+    assert settings.CSRF_COOKIE_NAME == "nav_csrftoken"
 
 
 @pytest.mark.django_db

@@ -39,6 +39,8 @@ docker compose exec web /app/scripts/smoke_report.sh
 | `SECURE_SSL_REDIRECT` | TLS proxy 正確後為 `true` |
 | `SECURE_HSTS_SECONDS`、`SECURE_HSTS_INCLUDE_SUBDOMAINS`、`SECURE_HSTS_PRELOAD` | 先短期驗證再逐步提高 |
 | `BIND_ADDRESS`、`HTTP_PORT` | 預設 `127.0.0.1:8000` |
+| `FORCE_SCRIPT_NAME` | 部署於 path prefix 時設定，例如 `/nav` |
+| `SESSION_COOKIE_NAME`、`CSRF_COOKIE_NAME` | 同 hostname 多應用時使用專屬 cookie 名稱 |
 
 `DJANGO_DEBUG` 由 Compose 強制 `false`。可選變數：`FRED_API_KEY`、`RFR_HTTP_TIMEOUT`、`REPORT_CONVERSION_TIMEOUT`、`LIBREOFFICE_BINARY`、`MAX_UPLOAD_BYTES`、`LOG_LEVEL`、`SESSION_COOKIE_AGE`。`DATABASE_URL` 只供非 Compose 部署，credentials 必須 URL encode。
 

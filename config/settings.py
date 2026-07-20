@@ -112,10 +112,15 @@ TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Hong_Kong")
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "/static/"
+URL_PREFIX = os.getenv("FORCE_SCRIPT_NAME", "").strip().rstrip("/")
+if URL_PREFIX and not URL_PREFIX.startswith("/"):
+    raise ValueError("FORCE_SCRIPT_NAME must be empty or start with '/'.")
+FORCE_SCRIPT_NAME = URL_PREFIX or None
+
+STATIC_URL = f"{URL_PREFIX}/static/" if URL_PREFIX else "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-MEDIA_URL = "/media/"
+MEDIA_URL = f"{URL_PREFIX}/media/" if URL_PREFIX else "/media/"
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -125,6 +130,10 @@ LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
 SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "28800"))
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "nav_sessionid")
+CSRF_COOKIE_NAME = os.getenv("CSRF_COOKIE_NAME", "nav_csrftoken")
+SESSION_COOKIE_PATH = f"{URL_PREFIX}/" if URL_PREFIX else "/"
+CSRF_COOKIE_PATH = SESSION_COOKIE_PATH
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
