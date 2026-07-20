@@ -336,11 +336,18 @@ def get_provider(provider_code: str) -> RiskFreeRateProvider:
 def refresh_report_rfr(report: QuarterlyReport, provider_code: str | None = None) -> RFRSnapshot:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
         raise RFRValidationError("已定稿報告的無風險利率快照不可修改。")
+    provider_was_explicit = provider_code is not None
     provider_code = provider_code or report.fund.resolved().get("rfr_provider")
     if not provider_code:
         from navapp.models import OrganizationSettings
 
         provider_code = OrganizationSettings.load().rfr_provider
+    if (
+        not provider_was_explicit
+        and provider_code == FREDProvider.provider_code
+        and not settings.FRED_API_KEY
+    ):
+        provider_code = TreasuryProvider.provider_code
     provider = get_provider(str(provider_code))
     start = report.report_date - timedelta(days=450)
     cached = list(

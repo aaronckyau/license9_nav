@@ -67,7 +67,7 @@ DB/media 必須同一 timestamp 並做 off-site encrypted copy；還原後核對
 
 ## 驗證與 artifacts
 
-全套結果：37 passed、1 local-LibreOffice skip；Ruff/Django/migrations/deploy check/Compose config PASS；VPS image build、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面 PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；最新三視窗 QA 為 39 張 screenshots、33 次 inspections、0 failures。
+全套結果：38 passed、1 local-LibreOffice skip；Ruff/Django/migrations/deploy check/Compose config PASS；VPS image build、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面 PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；最新三視窗 QA 為 39 張 screenshots、33 次 inspections、0 failures。
 
 ## Production 狀態
 

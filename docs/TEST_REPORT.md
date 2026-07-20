@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 37 passed, 1 skipped
+pytest -q                                         PASS: 38 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)

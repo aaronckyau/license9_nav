@@ -12,6 +12,7 @@ from django.utils import timezone as django_timezone
 from navapp.models import Fund, QuarterlyReport, RFRObservation, ShareClass
 from navapp.services import rfr
 from navapp.services.rfr import (
+    FetchResult,
     FREDProvider,
     Observation,
     RFRProviderError,
@@ -128,6 +129,33 @@ def test_cached_observations_are_reused_without_fetch(report, monkeypatch):
     snapshot = rfr.refresh_report_rfr(item, "FRED_DGS10")
     assert snapshot.observations.count() == 12
     assert snapshot.annual_value_decimal == Decimal("0.04065")
+
+
+@pytest.mark.django_db
+def test_automatic_rfr_uses_treasury_when_fred_key_is_not_configured(report, settings, monkeypatch):
+    item, _ = report
+    settings.FRED_API_KEY = ""
+
+    def treasury_result(_provider, _start_date, end_date):
+        observations = [
+            Observation(end_of_month(year, month), Decimal("4.25"))
+            for year, month in required_months(end_date)
+        ]
+        return FetchResult(
+            provider="TREASURY_CMT10",
+            series="BC_10YEAR",
+            observations=observations,
+            raw_checksum="a" * 64,
+            fetched_at=django_timezone.now(),
+        )
+
+    monkeypatch.setattr(TreasuryProvider, "fetch_observations", treasury_result)
+    snapshot = rfr.refresh_report_rfr(item)
+    assert snapshot.provider == "TREASURY_CMT10"
+    assert snapshot.series == "BC_10YEAR"
+    assert snapshot.observations.count() == 12
+    with pytest.raises(RFRProviderError, match="尚未設定 FRED_API_KEY"):
+        rfr.refresh_report_rfr(item, "FRED_DGS10")
 
 
 @pytest.mark.django_db
