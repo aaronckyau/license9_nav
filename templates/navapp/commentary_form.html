@@ -1,4 +1,4 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">STEP 4</p><h1>Manager Commentary</h1><p class="muted">Safe Markdown supports paragraphs, **bold**, *italic*, bullets, and numbered lists.</p></div></div><section class="panel narrow"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_div }}<div class="form-actions"><button class="button primary">Save Commentary</button><a class="button ghost" href="{% url 'report-review' report.pk %}">Cancel</a></div></form></section>
+<div class="page-heading"><div><p class="eyebrow">步驟 4</p><h1>基金經理評論</h1><p class="muted">安全 Markdown 支援段落、**粗體**、*斜體*、項目符號及編號清單。</p></div></div><section class="panel narrow"><form method="post" class="stack-form">{% csrf_token %}{{ form.as_div }}<div class="form-actions"><button class="button primary">儲存評論</button><a class="button ghost" href="{% url 'report-review' report.pk %}">取消</a></div></form></section>
 {% endblock %}

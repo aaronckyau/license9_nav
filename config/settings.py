@@ -106,8 +106,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en"
-LANGUAGES = [("en", "English"), ("zh-hant", "Traditional Chinese")]
+LANGUAGE_CODE = "zh-hant"
+LANGUAGES = [("zh-hant", "繁體中文")]
 TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Hong_Kong")
 USE_I18N = True
 USE_TZ = True

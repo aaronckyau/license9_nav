@@ -1,53 +1,53 @@
-{% load static i18n %}
+{% load static i18n nav_tags %}
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}NAV Quarterly Reporting{% endblock %}</title>
+  <title>{% block title %}NAV 季度報告系統{% endblock %}</title>
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
+  <a class="skip-link" href="#main-content">跳至主要內容</a>
   <header class="site-header">
     <a class="brand" href="{% url 'dashboard' %}">
       <span class="brand-mark">NAV</span>
-      <span><small>QUARTERLY REPORTING</small><strong>{{ organization_settings.display_name|default:"Fund Reporting" }}</strong></span>
+      <span><small>季度報告系統</small><strong>{{ organization_settings.display_name|default:"基金報告"|choice_label }}</strong></span>
     </a>
     {% if user.is_authenticated %}
-      <nav aria-label="Primary navigation">
-        <a href="{% url 'dashboard' %}">Dashboard</a>
-        <a href="{% url 'fund-list' %}">Funds</a>
-        <a href="{% url 'report-history' %}">Reports</a>
-        <a href="{% url 'audit-log' %}">Audit</a>
-        <a href="{% url 'organization-settings' %}">Settings</a>
+      <nav aria-label="主要導覽">
+        <a href="{% url 'dashboard' %}">儀表板</a>
+        <a href="{% url 'fund-list' %}">基金</a>
+        <a href="{% url 'report-history' %}">報告</a>
+        <a href="{% url 'audit-log' %}">稽核紀錄</a>
+        <a href="{% url 'organization-settings' %}">系統設定</a>
       </nav>
       <div class="account-menu">
         <a href="{% url 'password_change' %}">{{ user.get_username }}</a>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">Log out</button></form>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">登出</button></form>
       </div>
     {% endif %}
   </header>
   {% if user.is_authenticated and report %}
-    <nav class="workflow" aria-label="Report workflow">
-      <a href="{% url 'dashboard' %}"><b>0</b>Select Fund</a>
-      <a href="{% url 'fund-edit' report.fund_id %}"><b>1</b>Fund Setup</a>
-      <a href="{% url 'nav-history' report.share_class_id %}"><b>2</b>Enter NAV</a>
-      <a href="{% url 'report-review' report.pk %}"><b>3</b>Review Performance</a>
-      <a href="{% url 'report-commentary' report.pk %}"><b>4</b>Manager Commentary</a>
-      <a href="{% url 'report-preview' report.pk %}"><b>5</b>Preview</a>
-      <a href="{% url 'report-review' report.pk %}#generate"><b>6</b>Generate Report</a>
+    <nav class="workflow" aria-label="報告工作流程">
+      <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
+      <a href="{% url 'fund-edit' report.fund_id %}"><b>1</b>基金設定</a>
+      <a href="{% url 'nav-history' report.share_class_id %}"><b>2</b>輸入 NAV</a>
+      <a href="{% url 'report-review' report.pk %}"><b>3</b>檢視績效</a>
+      <a href="{% url 'report-commentary' report.pk %}"><b>4</b>基金經理評論</a>
+      <a href="{% url 'report-preview' report.pk %}"><b>5</b>預覽</a>
+      <a href="{% url 'report-review' report.pk %}#generate"><b>6</b>產生報告</a>
     </nav>
   {% elif user.is_authenticated %}
-    <nav class="workflow" aria-label="Application workflow">
-      <a href="{% url 'dashboard' %}"><b>0</b>Select Fund</a>
-      <a href="{% url 'fund-list' %}"><b>1</b>Fund Setup</a>
-      <a href="{% url 'dashboard' %}"><b>2</b>Enter NAV</a>
-      <a href="{% url 'report-history' %}"><b>3</b>Review Performance</a>
-      <a href="{% url 'report-history' %}"><b>4</b>Manager Commentary</a>
-      <a href="{% url 'report-history' %}"><b>5</b>Preview</a>
-      <a href="{% url 'report-history' %}"><b>6</b>Generate Report</a>
+    <nav class="workflow" aria-label="應用程式工作流程">
+      <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
+      <a href="{% url 'fund-list' %}"><b>1</b>基金設定</a>
+      <a href="{% url 'dashboard' %}"><b>2</b>輸入 NAV</a>
+      <a href="{% url 'report-history' %}"><b>3</b>檢視績效</a>
+      <a href="{% url 'report-history' %}"><b>4</b>基金經理評論</a>
+      <a href="{% url 'report-history' %}"><b>5</b>預覽</a>
+      <a href="{% url 'report-history' %}"><b>6</b>產生報告</a>
     </nav>
   {% endif %}
   <main id="main-content" class="page-shell">

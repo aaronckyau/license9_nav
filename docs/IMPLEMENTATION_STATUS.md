@@ -15,9 +15,11 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - Commentary/preview/versioning、DOCX/PDF、hash、外部 relationship audit、final immutability/staleness/audit。
 - XSQ 45 筆 legacy workbook 匯入及 2026 Q1 真實樣本報表。
 - Dockerfile、Compose、Nginx、entrypoint、health checks、backup/restore、CI 與完整文件。
-- 33 passed、1 個因本機無 LibreOffice 而 skip；三視窗 36 screenshots/30 inspections/0 failures。
+- 35 passed、1 個因本機無 LibreOffice 而 skip；繁中介面三視窗 32 張 screenshots／30 次 inspections／0 failures。
 - GitHub `main`、VPS `/root/apps/license9_nav`、subpath `/nav` 與 loopback port `5430` 已部署。
 - VPS Docker image build、三個 healthy containers、migration、`check --deploy`、LibreOffice DOCX/PDF smoke 與 public login/logout 已通過。
+- 一般使用者網站已完整繁體中文化，包括登入、導覽、七步工作流程、表單、狀態、驗證訊息、績效檢視、RFR、評論、預覽、報告歷史及稽核頁；專有名詞及基金資料保留原文。
+- 中文版 1440×1000、1024×900、390×844 共 30 頁面／viewport inspections，無水平溢出、殘留的核心英文操作標籤或舊術語「管理員評論」。
 
 ## 外部驗證限制
 

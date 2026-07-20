@@ -99,7 +99,7 @@ async function main() {
       await page.locator('input[name="password"]').fill(password);
       await Promise.all([
         page.waitForURL(`${baseUrl}/`),
-        page.getByRole("button", { name: "Sign in" }).click(),
+        page.getByRole("button", { name: "登入" }).click(),
       ]);
 
       for (const [pageName, route] of pages) {
@@ -113,7 +113,7 @@ async function main() {
         results.push({ page: pageName, viewport, screenshot, ...inspection });
       }
 
-      await page.getByRole("button", { name: "Log out" }).click();
+      await page.getByRole("button", { name: "登出" }).click();
       await page.waitForURL(`${baseUrl}/accounts/login/`);
       await page.screenshot({
         path: path.join(outputDir, `logout-${viewport.name}.png`),

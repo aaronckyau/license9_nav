@@ -99,7 +99,7 @@ class FREDProvider:
 
     def fetch_observations(self, start_date: date, end_date: date) -> FetchResult:
         if not self.api_key:
-            raise RFRProviderError("FRED_API_KEY is not configured.")
+            raise RFRProviderError("尚未設定 FRED_API_KEY。")
         params = {
             "series_id": self.series,
             "api_key": self.api_key,
@@ -115,7 +115,7 @@ class FREDProvider:
             response.raise_for_status()
             payload = response.json()
         except (requests.RequestException, json.JSONDecodeError) as exc:
-            raise RFRProviderError(f"FRED request failed: {exc}") from exc
+            raise RFRProviderError(f"FRED 請求失敗：{exc}") from exc
         raw = response.content
         return FetchResult(
             provider=self.provider_code,
@@ -141,7 +141,7 @@ class TreasuryProvider:
         try:
             root = ElementTree.fromstring(payload)
         except ElementTree.ParseError as exc:
-            raise RFRProviderError(f"Treasury XML parsing failed: {exc}") from exc
+            raise RFRProviderError(f"美國財政部 XML 解析失敗：{exc}") from exc
         parsed: list[Observation] = []
         for entry in root.iter():
             if not entry.tag.endswith("properties"):
@@ -177,7 +177,7 @@ class TreasuryProvider:
                 )
                 response.raise_for_status()
             except requests.RequestException as exc:
-                raise RFRProviderError(f"Treasury request failed for {year}: {exc}") from exc
+                raise RFRProviderError(f"美國財政部 {year} 年資料請求失敗：{exc}") from exc
             checksums.append(hashlib.sha256(response.content).hexdigest())
             all_observations.extend(self.parse_payload(response.content, end_date))
         observations = [
@@ -221,10 +221,10 @@ def select_month_end_observations(
         f"{year:04d}-{month:02d}" for year, month in expected if (year, month) not in grouped
     ]
     if missing:
-        raise RFRValidationError("Missing month-end RFR observations: " + ", ".join(missing))
+        raise RFRValidationError("缺少月底無風險利率觀察值：" + ", ".join(missing))
     selected = [grouped[key] for key in expected]
     if any(item.observation_date > report_end for item in selected):
-        raise RFRValidationError("RFR observations cannot extend beyond report end.")
+        raise RFRValidationError("無風險利率觀察日期不得超過報告截止日。")
     return selected
 
 
@@ -249,7 +249,7 @@ def cache_fetch_result(result: FetchResult) -> list[RFRObservation]:
 @transaction.atomic
 def attach_cached_snapshot(report: QuarterlyReport, provider: str, series: str) -> RFRSnapshot:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        raise RFRValidationError("A finalized report RFR snapshot is immutable.")
+        raise RFRValidationError("已定稿報告的無風險利率快照不可修改。")
     rows = list(
         RFRObservation.objects.filter(
             provider=provider,
@@ -301,9 +301,9 @@ def set_manual_snapshot(
     report: QuarterlyReport, value_percent: Decimal, reason: str, user
 ) -> RFRSnapshot:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        raise RFRValidationError("A finalized report RFR snapshot is immutable.")
+        raise RFRValidationError("已定稿報告的無風險利率快照不可修改。")
     if not reason.strip():
-        raise RFRValidationError("A manual RFR override requires a reason.")
+        raise RFRValidationError("手動覆寫無風險利率必須填寫原因。")
     snapshot, _ = RFRSnapshot.objects.update_or_create(
         report=report,
         defaults={
@@ -330,12 +330,12 @@ def get_provider(provider_code: str) -> RiskFreeRateProvider:
         return FREDProvider()
     if provider_code == TreasuryProvider.provider_code:
         return TreasuryProvider()
-    raise RFRProviderError(f"Unsupported online RFR provider: {provider_code}")
+    raise RFRProviderError(f"不支援的線上無風險利率來源：{provider_code}")
 
 
 def refresh_report_rfr(report: QuarterlyReport, provider_code: str | None = None) -> RFRSnapshot:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        raise RFRValidationError("A finalized report RFR snapshot is immutable.")
+        raise RFRValidationError("已定稿報告的無風險利率快照不可修改。")
     provider_code = provider_code or report.fund.resolved().get("rfr_provider")
     if not provider_code:
         from navapp.models import OrganizationSettings

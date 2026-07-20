@@ -136,7 +136,7 @@ def test_dynamic_drawdown_uses_running_peak():
                 NavPoint(date(2024, 1, 31), date(2024, 1, 31), Decimal("101")),
                 NavPoint(date(2024, 3, 31), date(2024, 3, 31), Decimal("102")),
             ],
-            "Missing NAV month 2024-02",
+            "缺少 NAV 月份 2024-02",
         ),
         (
             [
@@ -144,7 +144,7 @@ def test_dynamic_drawdown_uses_running_peak():
                 NavPoint(date(2024, 1, 31), date(2024, 1, 31), Decimal("102")),
                 NavPoint(date(2024, 3, 31), date(2024, 3, 31), Decimal("103")),
             ],
-            "Duplicate NAV month",
+            "NAV 月份重複",
         ),
         (
             [
@@ -152,7 +152,7 @@ def test_dynamic_drawdown_uses_running_peak():
                 NavPoint(date(2024, 2, 29), date(2024, 2, 29), Decimal("0")),
                 NavPoint(date(2024, 3, 31), date(2024, 3, 31), Decimal("102")),
             ],
-            "must be greater than zero",
+            "必須大於零",
         ),
     ],
 )
@@ -171,7 +171,7 @@ def test_missing_quarter_end_blocks_calculation():
         NavPoint(date(2024, 1, 31), date(2024, 1, 31), Decimal("101")),
         NavPoint(date(2024, 2, 29), date(2024, 2, 29), Decimal("102")),
     ]
-    with pytest.raises(CalculationValidationError, match="Quarter-end NAV"):
+    with pytest.raises(CalculationValidationError, match="季末 NAV"):
         calculate_performance(
             points=points,
             inception_nav=Decimal("100"),

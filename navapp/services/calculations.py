@@ -50,37 +50,35 @@ def validate_nav_points(
     )
     issues: list[str] = []
     if not ordered:
-        issues.append("No NAV observations exist through the report end.")
+        issues.append("報告截止日前沒有 NAV 觀察值。")
         raise CalculationValidationError(issues)
 
     seen: set[date] = set()
     for point in ordered:
         if point.nav <= 0:
-            issues.append(f"NAV for {point.valuation_month:%Y-%m} must be greater than zero.")
+            issues.append(f"{point.valuation_month:%Y-%m} 的 NAV 必須大於零。")
         if point.valuation_month != month_end(point.valuation_month):
-            issues.append(f"Valuation month {point.valuation_month} is not calendar month-end.")
+            issues.append(f"估值月份 {point.valuation_month} 不是日曆月底。")
         if point.valuation_month in seen:
-            issues.append(f"Duplicate NAV month: {point.valuation_month:%Y-%m}.")
+            issues.append(f"NAV 月份重複：{point.valuation_month:%Y-%m}。")
         seen.add(point.valuation_month)
 
     expected_first = month_end(inception_date)
     if ordered[0].valuation_month != expected_first:
         issues.append(
-            f"First NAV month must be the inception month {expected_first:%Y-%m}; "
-            f"found {ordered[0].valuation_month:%Y-%m}."
+            f"首個 NAV 月份必須是成立月份 {expected_first:%Y-%m}；"
+            f"目前為 {ordered[0].valuation_month:%Y-%m}。"
         )
 
     current = ordered[0].valuation_month
     for point in ordered[1:]:
         expected = next_month(current)
         if point.valuation_month != expected:
-            issues.append(
-                f"Missing NAV month {expected:%Y-%m} before {point.valuation_month:%Y-%m}."
-            )
+            issues.append(f"在 {point.valuation_month:%Y-%m} 前缺少 NAV 月份 {expected:%Y-%m}。")
         current = point.valuation_month
 
     if ordered[-1].valuation_month != report_end:
-        issues.append(f"Quarter-end NAV for {report_end:%Y-%m} is missing.")
+        issues.append(f"缺少 {report_end:%Y-%m} 的季末 NAV。")
     if issues:
         raise CalculationValidationError(issues)
     return ordered
@@ -88,7 +86,7 @@ def validate_nav_points(
 
 def monthly_returns(points: list[NavPoint], inception_nav: Decimal) -> list[Decimal]:
     if inception_nav <= 0:
-        raise CalculationValidationError(["Inception NAV must be greater than zero."])
+        raise CalculationValidationError(["成立時 NAV 必須大於零。"])
     returns: list[Decimal] = []
     prior = inception_nav
     for point in points:
@@ -211,7 +209,7 @@ def calculate_performance(
     sharpe_places: int = 3,
 ) -> dict[str, object]:
     if report_end != month_end(report_end) or report_end.month not in {3, 6, 9, 12}:
-        raise CalculationValidationError(["Report end must be a calendar quarter end."])
+        raise CalculationValidationError(["報告截止日必須為日曆季度末日。"])
     inception_nav = _decimal(inception_nav)
     annual_rfr_decimal = _decimal(annual_rfr_decimal) if annual_rfr_decimal is not None else None
     ordered = validate_nav_points(points, inception_date, report_end)

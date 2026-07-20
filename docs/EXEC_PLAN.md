@@ -14,7 +14,7 @@
 - [x] 實作純 Decimal、日期驅動的 `legacy_excel_v1` 與 XSQ regression。
 - [x] 實作 FRED、U.S. Treasury、cache、12 個月 cutoff、manual override 與 finalized 鎖定。
 - [x] 實作基金/share class CRUD、月度 NAV、duplicate/missing/abnormal warning、bulk import、audit/stale lifecycle。
-- [x] 實作 Review Performance、Manager Commentary、HTML Preview、版本歷史、不可變 finalization 與受保護下載。
+- [x] 實作績效檢視、基金經理評論、HTML 預覽、版本歷史、不可變定稿及受保護下載。
 - [x] 實作 Matplotlib chart、內建/custom DOCX、外部關聯稽核、LibreOffice headless PDF、hash 與 snapshot。
 - [x] 實作冪等 XSQ legacy import、demo seed、sample report 與 package audit commands。
 - [x] 完成 Docker/Nginx/health/volume/startup/backup/restore 靜態驗證及 Ubuntu CI。

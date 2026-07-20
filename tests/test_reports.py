@@ -196,19 +196,19 @@ def test_finalized_report_is_immutable_and_nav_edit_marks_it_stale(report_fixtur
     finalize_report(report, user)
     assert report.status == QuarterlyReport.Status.FINAL
     report.commentary_markdown = "Attempted mutation"
-    with pytest.raises(ValidationError, match="immutable"):
+    with pytest.raises(ValidationError, match="不可修改"):
         report.save()
     report.refresh_from_db()
     report.status = QuarterlyReport.Status.DRAFT
-    with pytest.raises(ValidationError, match="only transition"):
+    with pytest.raises(ValidationError, match="狀態只可"):
         report.save()
     generated = report.files.first()
     generated.sha256 = "0" * 64
-    with pytest.raises(ValidationError, match="files are immutable"):
+    with pytest.raises(ValidationError, match="檔案不可修改"):
         generated.save()
     rfr = report.rfr_snapshot
     rfr.override_reason = "Attempted mutation"
-    with pytest.raises(ValidationError, match="RFR snapshot is immutable"):
+    with pytest.raises(ValidationError, match="無風險利率快照不可修改"):
         rfr.save()
     record = report.share_class.nav_records.get(valuation_month=date(2024, 2, 29))
     assert mark_affected_reports_stale(record, user, "NAV correction") == 1

@@ -51,7 +51,7 @@ def parse_date(value: object, field_name: str) -> date:
             return parsed
         except ValueError:
             continue
-    raise ImportValidationError(f"Invalid {field_name}: {text!r}")
+    raise ImportValidationError(f"{field_name} 無效：{text!r}")
 
 
 def normalize_row(data: dict[str, object], row_number: int) -> ImportRow:
@@ -60,12 +60,12 @@ def normalize_row(data: dict[str, object], row_number: int) -> ImportRow:
         raw_date = parse_date(data.get("valuation_date") or raw_month, "valuation_date")
         nav = Decimal(str(data.get("nav_per_share", "")).strip())
     except (InvalidOperation, ImportValidationError) as exc:
-        raise ImportValidationError(f"Row {row_number}: {exc}") from exc
+        raise ImportValidationError(f"第 {row_number} 列：{exc}") from exc
     if nav <= 0:
-        raise ImportValidationError(f"Row {row_number}: NAV per share must be greater than zero.")
+        raise ImportValidationError(f"第 {row_number} 列：每股 NAV 必須大於零。")
     status = str(data.get("status") or NAVRecord.Status.OFFICIAL).strip().upper()
     if status not in NAVRecord.Status.values:
-        raise ImportValidationError(f"Row {row_number}: invalid status {status!r}.")
+        raise ImportValidationError(f"第 {row_number} 列：狀態 {status!r} 無效。")
     return ImportRow(
         valuation_month=month_end(raw_month),
         valuation_date=raw_date,
@@ -82,7 +82,7 @@ def validate_sequence(rows: list[ImportRow]) -> None:
     seen: set[date] = set()
     for row in sorted(rows, key=lambda item: item.valuation_month):
         if row.valuation_month in seen:
-            raise ImportValidationError(f"Duplicate month in import: {row.valuation_month:%Y-%m}.")
+            raise ImportValidationError(f"匯入資料有重複月份：{row.valuation_month:%Y-%m}。")
         seen.add(row.valuation_month)
     ordered = sorted(seen)
     for previous, current in zip(ordered, ordered[1:], strict=False):
@@ -94,7 +94,7 @@ def validate_sequence(rows: list[ImportRow]) -> None:
             calendar.monthrange(next_year, next_month)[1],
         )
         if current != expected:
-            raise ImportValidationError(f"Missing month in import: {expected:%Y-%m}.")
+            raise ImportValidationError(f"匯入資料缺少月份：{expected:%Y-%m}。")
 
 
 def parse_csv(file_obj: BinaryIO) -> list[ImportRow]:
@@ -103,7 +103,7 @@ def parse_csv(file_obj: BinaryIO) -> list[ImportRow]:
     reader = csv.DictReader(io.StringIO(text))
     required = {"valuation_month", "nav_per_share"}
     if not reader.fieldnames or not required.issubset(reader.fieldnames):
-        raise ImportValidationError("CSV requires valuation_month and nav_per_share headers.")
+        raise ImportValidationError("CSV 必須包含 valuation_month 及 nav_per_share 欄位標題。")
     rows = [normalize_row(dict(item), index) for index, item in enumerate(reader, start=2)]
     validate_sequence(rows)
     return rows
@@ -116,11 +116,11 @@ def parse_xlsx(file_obj: BinaryIO) -> list[ImportRow]:
     try:
         headers = [str(value or "").strip() for value in next(values)]
     except StopIteration as exc:
-        raise ImportValidationError("Workbook is empty.") from exc
+        raise ImportValidationError("工作簿是空白的。") from exc
     required = {"valuation_month", "nav_per_share"}
     if not required.issubset(headers):
         raise ImportValidationError(
-            "XLSX requires valuation_month and nav_per_share headers in its first row."
+            "XLSX 第一列必須包含 valuation_month 及 nav_per_share 欄位標題。"
         )
     rows: list[ImportRow] = []
     for index, values_row in enumerate(values, start=2):
@@ -139,13 +139,13 @@ def parse_uploaded_nav(file_obj, filename: str) -> list[ImportRow]:
         return parse_csv(file_obj)
     if suffix == ".xlsx":
         return parse_xlsx(file_obj)
-    raise ImportValidationError("Only .csv and .xlsx files are supported.")
+    raise ImportValidationError("只支援 .csv 及 .xlsx 檔案。")
 
 
 def parse_legacy_xsq(path: str | Path, sheet_name: str = "2026 Mar (monthly)") -> list[ImportRow]:
     workbook = load_workbook(path, read_only=False, data_only=True)
     if sheet_name not in workbook.sheetnames:
-        raise ImportValidationError(f"Worksheet {sheet_name!r} does not exist.")
+        raise ImportValidationError(f"工作表 {sheet_name!r} 不存在。")
     sheet = workbook[sheet_name]
     rows: list[ImportRow] = []
     for row_number in range(3, sheet.max_row + 1):
@@ -163,13 +163,10 @@ def parse_legacy_xsq(path: str | Path, sheet_name: str = "2026 Mar (monthly)") -
         warnings: list[str] = []
         normalized_month = month_end(raw_date_value)
         if raw_date_value != normalized_month:
-            warnings.append(
-                f"Raw workbook date {raw_date_value} was normalized to {normalized_month}."
-            )
+            warnings.append(f"工作簿原始日期 {raw_date_value} 已正規化為 {normalized_month}。")
         if not rows:
             warnings.append(
-                "First NAV shares the inception date but differs from inception NAV; "
-                "confirm it represents the first monthly observation."
+                "首筆 NAV 與成立日期相同，但數值不同於成立時 NAV；請確認它代表首個每月觀察值。"
             )
         rows.append(
             ImportRow(
@@ -184,7 +181,7 @@ def parse_legacy_xsq(path: str | Path, sheet_name: str = "2026 Mar (monthly)") -
         )
     validate_sequence(rows)
     if not rows:
-        raise ImportValidationError("No authoritative NAV rows were found in the workbook.")
+        raise ImportValidationError("工作簿中找不到具權威性的 NAV 資料列。")
     return rows
 
 
@@ -198,9 +195,7 @@ def import_rows(
     acknowledge_first_period: bool = False,
 ) -> dict[str, object]:
     if commit and rows and rows[0].warnings and not acknowledge_first_period:
-        raise ImportValidationError(
-            "The ambiguous first-period mapping requires --confirm-first-period."
-        )
+        raise ImportValidationError("首期對應存在歧義，必須使用 --confirm-first-period 確認。")
     created = 0
     skipped = 0
     conflicts: list[str] = []
@@ -242,7 +237,7 @@ def import_rows(
             item.save()
         created += 1
     if conflicts:
-        raise ImportValidationError("Import conflicts: " + "; ".join(conflicts))
+        raise ImportValidationError("匯入資料衝突：" + "; ".join(conflicts))
     return {
         "mode": "commit" if commit else "dry-run",
         "share_class": str(share_class),

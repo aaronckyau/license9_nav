@@ -12,6 +12,7 @@ from django.urls import get_script_prefix, reverse, set_script_prefix
 from navapp.models import AuditLog, Fund, NAVRecord, QuarterlyReport, ShareClass
 from navapp.services import reports
 from navapp.services.imports import ImportValidationError, parse_legacy_xsq, validate_sequence
+from navapp.templatetags.nav_tags import choice_label, zh_date, zh_text
 
 
 def test_nav_subpath_reverse_and_cookie_settings(settings):
@@ -39,9 +40,9 @@ def test_legacy_import_is_complete_normalized_and_idempotent(django_user_model):
 
 def test_import_sequence_rejects_duplicate_and_missing_months():
     rows = parse_legacy_xsq(Path("reference/xsq_nav_history.xlsx"))
-    with pytest.raises(ImportValidationError, match="Duplicate"):
+    with pytest.raises(ImportValidationError, match="重複月份"):
         validate_sequence([rows[0], rows[0]])
-    with pytest.raises(ImportValidationError, match="Missing month"):
+    with pytest.raises(ImportValidationError, match="缺少月份"):
         validate_sequence([rows[0], rows[2]])
 
 
@@ -97,6 +98,35 @@ def test_anonymous_pages_and_downloads_require_login(client, settings, tmp_path)
     assert client.get(reverse("report-history")).status_code == 302
     assert client.get("/reports/999/download/pdf/").status_code == 302
     assert client.get(reverse("healthz")).status_code == 200
+
+
+@pytest.mark.django_db
+def test_user_interface_uses_traditional_chinese(client, django_user_model):
+    login = client.get(reverse("login"))
+    assert '<html lang="zh-Hant">' in login.content.decode()
+    assert "登入" in login.content.decode()
+    assert "內部系統" in login.content.decode()
+
+    user = django_user_model.objects.create_user("zh-user", password="safe-password")
+    client.force_login(user)
+    dashboard = client.get(reverse("dashboard")).content.decode()
+    assert "選擇基金" in dashboard
+    assert "建立季度報告" in dashboard
+    assert "基金經理評論" in dashboard
+    assert "Dashboard" not in dashboard
+    assert "Select Fund" not in dashboard
+
+
+def test_dynamic_user_interface_text_uses_traditional_chinese():
+    assert choice_label("GENERATE_DOCX") == "產生 Word 報告"
+    assert (
+        zh_text("Quarter-end NAV / previous quarter-end NAV - 1")
+        == "季度末 NAV ÷ 上一季度末 NAV − 1"
+    )
+    assert "工作簿" in zh_text("Intentional correction from the workbook fixed-cell result.")
+    assert zh_text("Report end must be a calendar quarter end.") == "報告截止日必須為日曆季度末日。"
+    assert zh_date("2026-03-31") == "2026 年 3 月 31 日"
+    assert zh_text("Fund settings changed: short_code") == "基金設定已變更： short_code"
 
 
 @pytest.mark.django_db
@@ -175,7 +205,7 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
         },
     )
     assert duplicate_response.status_code == 200
-    assert b"active NAV record already exists" in duplicate_response.content
+    assert "已存在一筆有效 NAV 紀錄" in duplicate_response.content.decode()
     response = client.post(
         reverse("report-create"), {"share_class": share.pk, "year": "2024", "quarter": "1"}
     )

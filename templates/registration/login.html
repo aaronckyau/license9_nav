@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Sign in | NAV Quarterly Reporting{% endblock %}
+{% block title %}登入｜NAV 季度報告系統{% endblock %}
 {% block content %}
 <section class="auth-card panel">
-  <p class="eyebrow">INTERNAL ACCESS</p>
-  <h1>Sign in</h1>
-  <p class="muted">Use your authorized reporting account.</p>
+  <p class="eyebrow">內部系統</p>
+  <h1>登入</h1>
+  <p class="muted">請使用獲授權的報告系統帳戶。</p>
   <form method="post" class="stack-form">{% csrf_token %}
     {{ form.non_field_errors }}
     {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
-    <button class="button primary" type="submit">Sign in</button>
+    <button class="button primary" type="submit">登入</button>
   </form>
 </section>
 {% endblock %}

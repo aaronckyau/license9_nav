@@ -2,7 +2,7 @@
 
 ## 交付摘要
 
-MVP 已完成、推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機 application/calculation/import/RFR/browser/artifact checks 及 VPS production Docker/LibreOffice/public smoke。主流程是自訂頁面 `Select Fund → Fund Setup → Enter NAV → Review Performance → Manager Commentary → Preview → Generate Report`；Admin 只作 trusted correction。
+MVP 已完成、推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機應用程式、計算、匯入、RFR、瀏覽器及產物檢查，以及 VPS production Docker／LibreOffice／公開端點 smoke test。主流程是自訂頁面「選擇基金 → 基金設定 → 輸入 NAV → 檢視績效 → 基金經理評論 → 預覽 → 產生報告」；Django Admin 只供受信任的資料修正人員使用。
 
 ## Runtime 與入口
 

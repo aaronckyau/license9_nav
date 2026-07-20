@@ -2,7 +2,7 @@
 
 最後更新：2026-07-20
 
-1. MVP UI 與對外報表使用英文；工程/操作文件以繁體中文交接。
+1. 一般使用者網站與工程／操作文件使用繁體中文；基金名稱、代碼、幣別、公式 ID、官方資料來源、稽核 JSON 欄位及使用者輸入的報告內容保留原文。對外 DOCX/PDF 的語言仍依基金報告內容及 `report_language` 設定，不由網站介面語言自動改寫。現階段為完整繁中單語介面；若日後重新啟用英文切換，須補齊 Django message catalog。
 2. Organization defaults 存於 singleton；fund 可明確覆寫。報表生成時把 resolved 值寫入 immutable snapshot。
 3. 本機/測試允許 SQLite；Linux container/VPS 使用 PostgreSQL 17。
 4. Valuation month 是 calendar month-end；valuation date 是使用者提供的實際日期。

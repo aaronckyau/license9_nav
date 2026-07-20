@@ -99,7 +99,7 @@ def test_end_of_period_selection_uses_last_non_null_day_and_exact_twelve_months(
 
 def test_fewer_than_twelve_months_is_rejected():
     observations = [Observation(end_of_month(2026, month), Decimal("4")) for month in range(1, 4)]
-    with pytest.raises(RFRValidationError, match="Missing month-end"):
+    with pytest.raises(RFRValidationError, match="缺少月底"):
         select_month_end_observations(observations, date(2026, 3, 31))
 
 
@@ -133,7 +133,7 @@ def test_cached_observations_are_reused_without_fetch(report, monkeypatch):
 @pytest.mark.django_db
 def test_manual_override_requires_reason_and_records_user(report):
     item, user = report
-    with pytest.raises(RFRValidationError, match="requires a reason"):
+    with pytest.raises(RFRValidationError, match="必須填寫原因"):
         set_manual_snapshot(item, Decimal("4.19"), "", user)
     snapshot = set_manual_snapshot(item, Decimal("4.19"), "Legacy reconciliation", user)
     assert snapshot.is_manual is True
@@ -151,7 +151,7 @@ def test_online_refresh_cannot_modify_finalized_report(report, monkeypatch):
         raise AssertionError("provider must not be called for a finalized report")
 
     monkeypatch.setattr(rfr, "get_provider", unexpected_provider)
-    with pytest.raises(RFRValidationError, match="immutable"):
+    with pytest.raises(RFRValidationError, match="不可修改"):
         rfr.refresh_report_rfr(item, "FRED_DGS10")
 
 
@@ -164,5 +164,5 @@ class TimeoutSession:
 
 def test_fred_timeout_is_wrapped_in_useful_error(settings):
     provider = FREDProvider(api_key="fake", session=TimeoutSession())
-    with pytest.raises(RFRProviderError, match="FRED request failed"):
+    with pytest.raises(RFRProviderError, match="FRED 請求失敗"):
         provider.fetch_observations(date(2025, 1, 1), date(2026, 3, 31))

@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 33 passed, 1 skipped
+pytest -q                                         PASS: 35 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -45,6 +45,8 @@ Public /nav login/logout/static/health/readiness  PASS
 ## Browser visual QA
 
 `scripts/visual_qa.cjs` 以 Edge 執行 1440×1000、1024×900、390×844。結果：36 screenshots、30 inspections、0 horizontal overflow、0 escaped controls、0 console error、0 page error。JSON：`artifacts/visual-qa/visual-qa-results.json`；三張 contact sheets 與全部頁面截圖同目錄。
+
+繁體中文介面另以 in-app browser 重新檢查 10 個主要頁面 × 3 個 viewport，產生 30 張全頁截圖及 2 張首屏證據；0 horizontal overflow、0 核心英文操作標籤、0 舊術語「管理員評論」。結果：`artifacts/visual-qa-zh/visual-qa-results.json`。390px 首屏另以非 full-page viewport 截圖核對導覽及工作流程文字沒有被壓縮。
 
 ## XSQ report QA
 

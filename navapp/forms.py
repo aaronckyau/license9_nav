@@ -7,6 +7,7 @@ from zipfile import BadZipFile, ZipFile
 
 from django import forms
 from django.conf import settings
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.forms import inlineformset_factory
 
 from navapp.models import (
@@ -23,15 +24,92 @@ from navapp.models import (
 )
 from navapp.services.reports import REQUIRED_CUSTOM_PLACEHOLDERS
 
+CHOICE_LABELS_ZH = {
+    "FRED_DGS10": "FRED DGS10（美國聯邦儲備經濟數據）",
+    "TREASURY_CMT10": "美國財政部 10 年期固定到期利率",
+    "MANUAL": "手動覆寫",
+    "PORTFOLIO_MANAGER": "投資組合經理",
+    "GENERAL_PARTNER": "普通合夥人",
+    "INVESTMENT_MANAGER": "投資經理",
+    "ADMINISTRATOR": "基金行政管理人",
+    "AUDITOR": "核數師",
+    "LEGAL_ADVISER": "法律顧問",
+    "CUSTODIAN": "託管人／主經紀商",
+    "OTHER": "其他",
+    "NET": "扣除費用後",
+    "GROSS": "扣除費用前",
+    "OFFICIAL": "正式",
+    "INDICATIVE": "參考",
+}
+
+
+def translate_choices(field) -> None:
+    field.choices = [
+        (value, CHOICE_LABELS_ZH.get(str(value), label)) for value, label in field.choices
+    ]
+
 
 class DateInput(forms.DateInput):
     input_type = "date"
 
 
+class ChineseAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(label="使用者名稱")
+    password = forms.CharField(label="密碼", strip=False, widget=forms.PasswordInput)
+    error_messages = {
+        "invalid_login": "使用者名稱或密碼不正確，請重新輸入。",
+        "inactive": "此帳戶已停用。",
+    }
+
+
+class ChinesePasswordChangeForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label="目前密碼",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+    )
+    new_password1 = forms.CharField(
+        label="新密碼",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+    new_password2 = forms.CharField(
+        label="確認新密碼",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+    )
+    error_messages = {
+        **PasswordChangeForm.error_messages,
+        "password_incorrect": "目前密碼不正確，請重新輸入。",
+        "password_mismatch": "兩次輸入的新密碼不一致。",
+    }
+
+
 class OrganizationSettingsForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        translate_choices(self.fields["rfr_provider"])
+
     class Meta:
         model = OrganizationSettings
         exclude = ()
+        labels = {
+            "display_name": "系統顯示名稱",
+            "default_logo": "預設標誌",
+            "primary_brand_colour": "主要品牌顏色",
+            "professional_investor_statement": "專業投資者聲明",
+            "report_date_statement_template": "報告日期聲明範本",
+            "default_disclaimer": "預設免責聲明",
+            "disclaimer_version": "免責聲明版本",
+            "disclaimer_effective_date": "免責聲明生效日期",
+            "default_contact_information": "預設聯絡資料",
+            "percentage_decimal_places": "百分比小數位數",
+            "sharpe_decimal_places": "夏普比率小數位數",
+            "report_language": "報告語言",
+            "rfr_provider": "無風險利率資料來源",
+            "rfr_series": "無風險利率數據系列",
+            "nav_change_warning_threshold": "NAV 變動警告門檻",
+        }
         widgets = {
             "disclaimer_effective_date": DateInput(),
             "default_disclaimer": forms.Textarea(attrs={"rows": 8}),
@@ -43,6 +121,31 @@ class FundForm(forms.ModelForm):
     class Meta:
         model = Fund
         exclude = ("created_at", "updated_at")
+        labels = {
+            "legal_name": "法定名稱",
+            "display_name": "顯示名稱",
+            "short_code": "基金代碼",
+            "structure": "法律架構",
+            "domicile": "註冊地",
+            "year_end_month": "財政年度結束月份",
+            "year_end_day": "財政年度結束日期",
+            "report_language": "報告語言",
+            "is_active": "啟用基金",
+            "investment_objective": "投資目標",
+            "performance_note": "績效附註",
+            "use_org_professional_statement": "使用機構的專業投資者聲明",
+            "professional_investor_statement_override": "基金專業投資者聲明",
+            "use_org_date_statement": "使用機構的報告日期聲明",
+            "date_statement_override": "基金報告日期聲明",
+            "use_org_disclaimer": "使用機構的免責聲明",
+            "disclaimer_override": "基金免責聲明",
+            "disclaimer_version_override": "基金免責聲明版本",
+            "disclaimer_effective_date_override": "基金免責聲明生效日期",
+            "logo_override": "基金標誌",
+            "brand_colour_override": "基金品牌顏色",
+            "header_text_override": "報告頁首文字",
+            "custom_docx_template": "自訂 DOCX 範本",
+        }
         widgets = {
             "investment_objective": forms.Textarea(attrs={"rows": 5}),
             "performance_note": forms.Textarea(attrs={"rows": 3}),
@@ -55,47 +158,39 @@ class FundForm(forms.ModelForm):
         if not uploaded or not hasattr(uploaded, "read"):
             return uploaded
         if not uploaded.name.lower().endswith(".docx"):
-            raise forms.ValidationError("Custom report template must be a .docx file.")
+            raise forms.ValidationError("自訂報告範本必須是 .docx 檔案。")
         if uploaded.size > settings.MAX_UPLOAD_BYTES:
-            raise forms.ValidationError("Custom report template exceeds the upload limit.")
+            raise forms.ValidationError("自訂報告範本超過上載大小限制。")
         content_type = getattr(uploaded, "content_type", "")
         if content_type and content_type not in {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/octet-stream",
         }:
-            raise forms.ValidationError("Custom report template has an invalid MIME type.")
+            raise forms.ValidationError("自訂報告範本的 MIME 類型無效。")
         try:
             uploaded.seek(0)
             with ZipFile(uploaded) as archive:
                 members = archive.infolist()
                 if sum(member.file_size for member in members) > settings.MAX_UPLOAD_BYTES * 10:
-                    raise forms.ValidationError(
-                        "The uncompressed custom template exceeds the safety limit."
-                    )
+                    raise forms.ValidationError("解壓後的自訂範本超過安全大小限制。")
                 required_members = {"[Content_Types].xml", "word/document.xml"}
                 if not required_members.issubset(member.filename for member in members):
-                    raise forms.ValidationError(
-                        "The custom report template is missing required DOCX members."
-                    )
+                    raise forms.ValidationError("自訂報告範本缺少必要的 DOCX 元件。")
                 package_text = "".join(
                     archive.read(name).decode("utf-8", errors="ignore")
                     for name in archive.namelist()
                     if name.endswith((".xml", ".rels"))
                 )
         except (BadZipFile, KeyError, OSError, RuntimeError) as exc:
-            raise forms.ValidationError(
-                "The custom report template is not a valid DOCX package."
-            ) from exc
+            raise forms.ValidationError("自訂報告範本不是有效的 DOCX 封裝。") from exc
         finally:
             uploaded.seek(0)
         missing = [name for name in REQUIRED_CUSTOM_PLACEHOLDERS if name not in package_text]
         if missing:
-            raise forms.ValidationError(
-                "Missing required placeholders: " + ", ".join(sorted(missing))
-            )
+            raise forms.ValidationError("缺少必要的預留位置：" + ", ".join(sorted(missing)))
         lower = package_text.lower()
         if 'targetmode="external"' in lower and (".xlsx" in lower or "oleobject" in lower):
-            raise forms.ValidationError("External Excel relationships are not allowed.")
+            raise forms.ValidationError("不允許外部 Excel 關聯。")
         return uploaded
 
 
@@ -103,6 +198,7 @@ StrategyFormSet = inlineformset_factory(
     Fund,
     FundStrategyHighlight,
     fields=("text", "sort_order"),
+    labels={"text": "策略重點", "sort_order": "顯示次序"},
     extra=1,
     can_delete=True,
     min_num=1,
@@ -112,6 +208,12 @@ PartyFormSet = inlineformset_factory(
     Fund,
     FundParty,
     fields=("party_type", "display_label", "value", "sort_order"),
+    labels={
+        "party_type": "機構類型",
+        "display_label": "顯示標籤",
+        "value": "名稱／內容",
+        "sort_order": "顯示次序",
+    },
     extra=1,
     can_delete=True,
 )
@@ -119,6 +221,13 @@ TermFormSet = inlineformset_factory(
     Fund,
     FundTerm,
     fields=("key", "display_label", "value_text", "display_in_report", "sort_order"),
+    labels={
+        "key": "識別鍵",
+        "display_label": "顯示標籤",
+        "value_text": "內容",
+        "display_in_report": "顯示於報告",
+        "sort_order": "顯示次序",
+    },
     extra=1,
     can_delete=True,
 )
@@ -126,22 +235,51 @@ ContactFormSet = inlineformset_factory(
     Fund,
     Contact,
     fields=("role", "name", "email", "phone", "address", "display_in_report", "sort_order"),
+    labels={
+        "role": "角色",
+        "name": "姓名／機構名稱",
+        "email": "電郵",
+        "phone": "電話",
+        "address": "地址",
+        "display_in_report": "顯示於報告",
+        "sort_order": "顯示次序",
+    },
     extra=1,
     can_delete=True,
 )
 
+translate_choices(PartyFormSet.form.base_fields["party_type"])
+
 
 class ShareClassForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        translate_choices(self.fields["return_basis"])
+
     class Meta:
         model = ShareClass
         exclude = ("fund", "created_at", "updated_at")
+        labels = {
+            "name": "股份類別名稱",
+            "code": "股份類別代碼",
+            "inception_date": "成立日期",
+            "inception_nav": "成立時 NAV",
+            "currency": "貨幣",
+            "return_basis": "回報基準",
+            "management_fee_override": "管理費覆寫",
+            "performance_fee_override": "績效費覆寫",
+            "bloomberg_code_override": "Bloomberg 代碼覆寫",
+            "is_active": "啟用股份類別",
+            "display_in_quarterly_report": "顯示於季度報告",
+        }
         widgets = {"inception_date": DateInput()}
 
 
 class NAVRecordForm(forms.ModelForm):
     acknowledge_large_change = forms.BooleanField(
+        label="確認異常 NAV 變動",
         required=False,
-        help_text="Required when the change from the preceding month exceeds the configured threshold.",
+        help_text="當相對上月的變動超過設定門檻時必須確認。",
     )
 
     class Meta:
@@ -154,11 +292,19 @@ class NAVRecordForm(forms.ModelForm):
             "note",
             "acknowledge_large_change",
         )
+        labels = {
+            "valuation_month": "估值月份",
+            "valuation_date": "估值日期",
+            "nav_per_share": "每股 NAV",
+            "status": "狀態",
+            "note": "備註",
+        }
         widgets = {"valuation_month": DateInput(), "valuation_date": DateInput()}
 
     def __init__(self, *args, share_class: ShareClass | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.share_class = share_class or getattr(self.instance, "share_class", None)
+        translate_choices(self.fields["status"])
 
     def clean_valuation_month(self):
         value = self.cleaned_data["valuation_month"]
@@ -187,8 +333,8 @@ class NAVRecordForm(forms.ModelForm):
             if abs(change) > threshold and not cleaned.get("acknowledge_large_change"):
                 self.add_error(
                     "acknowledge_large_change",
-                    f"NAV changes by {change * 100:.2f}% from {prior.valuation_month:%Y-%m}. "
-                    "Review and acknowledge before saving.",
+                    f"NAV 相對 {prior.valuation_month:%Y-%m} 變動 {change * 100:.2f}%。"
+                    "請先檢查並確認，才可儲存。",
                 )
         return cleaned
 
@@ -202,19 +348,19 @@ class NAVRecordForm(forms.ModelForm):
 
 
 class NAVEditReasonForm(forms.Form):
-    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}))
+    reason = forms.CharField(label="修改原因", widget=forms.Textarea(attrs={"rows": 3}))
 
 
 class BulkImportForm(forms.Form):
-    file = forms.FileField(help_text="CSV or XLSX; maximum 10 MB.")
+    file = forms.FileField(label="匯入檔案", help_text="支援 CSV 或 XLSX；上限 10 MB。")
 
     def clean_file(self):
         uploaded = self.cleaned_data["file"]
         if uploaded.size > settings.MAX_UPLOAD_BYTES:
-            raise forms.ValidationError("Upload exceeds the configured size limit.")
+            raise forms.ValidationError("上載檔案超過設定的大小限制。")
         suffix = uploaded.name.rsplit(".", 1)[-1].lower()
         if suffix not in {"csv", "xlsx"}:
-            raise forms.ValidationError("Only CSV and XLSX files are supported.")
+            raise forms.ValidationError("只支援 CSV 及 XLSX 檔案。")
         expected_types = {
             "csv": {"text/csv", "application/csv", "text/plain", "application/octet-stream"},
             "xlsx": {
@@ -224,7 +370,7 @@ class BulkImportForm(forms.Form):
         }
         content_type = getattr(uploaded, "content_type", "")
         if content_type and content_type not in expected_types[suffix]:
-            raise forms.ValidationError("The upload MIME type does not match its extension.")
+            raise forms.ValidationError("上載檔案的 MIME 類型與副檔名不符。")
         return uploaded
 
 
@@ -232,6 +378,7 @@ class ReportCreateForm(forms.ModelForm):
     class Meta:
         model = QuarterlyReport
         fields = ("share_class", "year", "quarter")
+        labels = {"share_class": "股份類別", "year": "報告年度", "quarter": "季度"}
 
     def clean(self):
         cleaned = super().clean()
@@ -254,6 +401,12 @@ class CommentaryForm(forms.ModelForm):
             "commentary_author",
             "commentary_date",
         )
+        labels = {
+            "commentary_title": "評論標題",
+            "commentary_markdown": "評論內容",
+            "commentary_author": "作者",
+            "commentary_date": "評論日期",
+        }
         widgets = {
             "commentary_markdown": forms.Textarea(attrs={"rows": 14}),
             "commentary_date": DateInput(),
@@ -262,12 +415,12 @@ class CommentaryForm(forms.ModelForm):
     def clean_commentary_markdown(self):
         value = self.cleaned_data["commentary_markdown"]
         if re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
-            raise forms.ValidationError("Raw HTML is not supported. Use the safe Markdown subset.")
+            raise forms.ValidationError("不支援原始 HTML，請使用安全的 Markdown 語法。")
         if not value.strip():
-            raise forms.ValidationError("Manager Commentary is required.")
+            raise forms.ValidationError("必須填寫基金經理評論。")
         return value
 
 
 class ManualRFRForm(forms.Form):
-    value_percent = forms.DecimalField(max_digits=12, decimal_places=8)
-    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}))
+    value_percent = forms.DecimalField(label="年度利率（百分比）", max_digits=12, decimal_places=8)
+    reason = forms.CharField(label="覆寫原因", widget=forms.Textarea(attrs={"rows": 3}))

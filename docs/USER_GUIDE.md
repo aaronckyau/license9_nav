@@ -8,7 +8,7 @@
 2. **Fund Setup**：填 legal/display name、domicile、objective；建立一或多個 share classes/series；設定 strategy、parties、terms、contacts。
 3. **Enter NAV**：逐月輸入 valuation month/date 與 NAV per share，或 dry-run/confirm CSV/XLSX import。
 4. **Review Performance**：選 year/quarter/version，檢查 continuity warnings、quarterly table、NAV chart、metrics 與 RFR。
-5. **Manager Commentary**：輸入 title、Markdown commentary、author、date；可重複編輯 draft。
+5. **基金經理評論**：輸入標題、Markdown 評論、作者及日期；草稿階段可重複編輯。
 6. **Preview**：檢查所有報表 section、負百分比、小數精度、disclaimer 與 provenance。
 7. **Generate Report**：產生 DOCX/PDF；下載、核對後 finalization。資料需更正時建立新 version，不覆寫 FINAL。
 

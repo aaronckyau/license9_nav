@@ -1,0 +1,422 @@
+[
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/dashboard-desktop-1440.png",
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-list-desktop-1440.png",
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-setup-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-history-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-entry-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-review-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/manager-commentary-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-preview-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-history-desktop-1440.png",
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/organization-settings-desktop-1440.png",
+    "documentWidth": 1425,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1440,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/dashboard-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-list-tablet-1024.png",
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-setup-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-history-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-entry-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-review-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/manager-commentary-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-preview-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-history-tablet-1024.png",
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/organization-settings-tablet-1024.png",
+    "documentWidth": 1009,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 1024,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/dashboard-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-list-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/fund-setup-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-history-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/nav-entry-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-review-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/manager-commentary-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-preview-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/report-history-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:/Users/aaron/Documents/license9/monthly_nav/artifacts/visual-qa-zh/organization-settings-mobile-390.png",
+    "documentWidth": 375,
+    "horizontalOverflow": false,
+    "title": "NAV 季度報告系統",
+    "viewportWidth": 390,
+    "visibleEnglishUi": []
+  }
+]

@@ -22,7 +22,7 @@ def month_end(value: date) -> date:
 
 def validate_month_end(value: date) -> None:
     if value != month_end(value):
-        raise ValidationError("Valuation month must be the last calendar day of its month.")
+        raise ValidationError("估值月份必須是該月最後一個日曆日。")
 
 
 class OrganizationSettings(models.Model):
@@ -36,7 +36,7 @@ class OrganizationSettings(models.Model):
     primary_brand_colour = models.CharField(
         max_length=7,
         default="#183B73",
-        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Use a six-digit hex colour.")],
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "請輸入六位數的十六進位色碼。")],
     )
     professional_investor_statement = models.CharField(
         max_length=300, default="For Professional Investors only"
@@ -111,7 +111,7 @@ class Fund(models.Model):
     brand_colour_override = models.CharField(
         max_length=7,
         blank=True,
-        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Use a six-digit hex colour.")],
+        validators=[RegexValidator(r"^#[0-9A-Fa-f]{6}$", "請輸入六位數的十六進位色碼。")],
     )
     header_text_override = models.CharField(max_length=300, blank=True)
     custom_docx_template = models.FileField(upload_to="funds/templates/", blank=True)
@@ -126,14 +126,14 @@ class Fund(models.Model):
         try:
             date(2024, self.year_end_month, self.year_end_day)
         except ValueError as exc:
-            raise ValidationError({"year_end_day": "Invalid financial year-end date."}) from exc
+            raise ValidationError({"year_end_day": "財政年度結束日期無效。"}) from exc
         override_pairs = [
             (self.use_org_professional_statement, self.professional_investor_statement_override),
             (self.use_org_date_statement, self.date_statement_override),
             (self.use_org_disclaimer, self.disclaimer_override),
         ]
         if any(use_org is False and not value.strip() for use_org, value in override_pairs):
-            raise ValidationError("Each disabled organization default requires a fund override.")
+            raise ValidationError("停用任何機構預設值時，都必須提供相應的基金覆寫內容。")
 
     def get_absolute_url(self) -> str:
         return reverse("fund-edit", args=[self.pk])
@@ -331,13 +331,9 @@ class NAVRecord(models.Model):
     def clean(self) -> None:
         super().clean()
         if self.valuation_date < self.share_class.inception_date:
-            raise ValidationError(
-                {"valuation_date": "Valuation date cannot precede share-class inception."}
-            )
+            raise ValidationError({"valuation_date": "估值日期不得早於股份類別成立日期。"})
         if self.valuation_month < month_end(self.share_class.inception_date):
-            raise ValidationError(
-                {"valuation_month": "Valuation month cannot precede share-class inception month."}
-            )
+            raise ValidationError({"valuation_month": "估值月份不得早於股份類別成立月份。"})
 
     def __str__(self) -> str:
         return f"{self.share_class} {self.valuation_month:%Y-%m}: {self.nav_per_share}"
@@ -412,9 +408,9 @@ class QuarterlyReport(models.Model):
     def clean(self) -> None:
         super().clean()
         if self.share_class_id and self.fund_id and self.share_class.fund_id != self.fund_id:
-            raise ValidationError({"share_class": "Share class must belong to the selected fund."})
+            raise ValidationError({"share_class": "股份類別必須屬於所選基金。"})
         if self.report_date != self.quarter_end:
-            raise ValidationError({"report_date": "Report date must be the calendar quarter end."})
+            raise ValidationError({"report_date": "報告日期必須是該季度的日曆季末。"})
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -423,9 +419,7 @@ class QuarterlyReport(models.Model):
                 if self.status != old.status and not (
                     old.status == self.Status.FINAL and self.status == self.Status.STALE
                 ):
-                    raise ValidationError(
-                        "Finalized report status may only transition from FINAL to STALE."
-                    )
+                    raise ValidationError("已定稿報告的狀態只可由「已定稿」轉為「需重新產生」。")
                 immutable = (
                     "fund_id",
                     "share_class_id",
@@ -444,7 +438,7 @@ class QuarterlyReport(models.Model):
                     "finalized_at",
                 )
                 if any(getattr(old, field) != getattr(self, field) for field in immutable):
-                    raise ValidationError("Finalized report content and snapshot are immutable.")
+                    raise ValidationError("已定稿報告的內容及快照不可修改。")
         super().save(*args, **kwargs)
 
     @property
@@ -480,7 +474,7 @@ class RFRSnapshot(models.Model):
     def clean(self) -> None:
         super().clean()
         if self.is_manual and not self.override_reason.strip():
-            raise ValidationError({"override_reason": "A manual override requires a reason."})
+            raise ValidationError({"override_reason": "手動覆寫必須填寫原因。"})
 
     def save(self, *args, **kwargs):
         if (
@@ -490,7 +484,7 @@ class RFRSnapshot(models.Model):
                 status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
             ).exists()
         ):
-            raise ValidationError("A finalized report RFR snapshot is immutable.")
+            raise ValidationError("已定稿報告的無風險利率快照不可修改。")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -498,7 +492,7 @@ class RFRSnapshot(models.Model):
             pk=self.report_id,
             status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
         ).exists():
-            raise ValidationError("A finalized report RFR snapshot is immutable.")
+            raise ValidationError("已定稿報告的無風險利率快照不可修改。")
         return super().delete(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -536,7 +530,7 @@ class ReportRFRObservation(models.Model):
                 status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
             ).exists()
         ):
-            raise ValidationError("Finalized report RFR observations are immutable.")
+            raise ValidationError("已定稿報告的無風險利率觀察值不可修改。")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -544,7 +538,7 @@ class ReportRFRObservation(models.Model):
             pk=self.snapshot.report_id,
             status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
         ).exists():
-            raise ValidationError("Finalized report RFR observations are immutable.")
+            raise ValidationError("已定稿報告的無風險利率觀察值不可修改。")
         return super().delete(*args, **kwargs)
 
 
@@ -582,7 +576,7 @@ class GeneratedFile(models.Model):
                 status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
             ).exists()
         ):
-            raise ValidationError("Finalized report files are immutable.")
+            raise ValidationError("已定稿報告的檔案不可修改。")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -590,7 +584,7 @@ class GeneratedFile(models.Model):
             pk=self.report_id,
             status__in=(QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE),
         ).exists():
-            raise ValidationError("Finalized report files are immutable.")
+            raise ValidationError("已定稿報告的檔案不可修改。")
         return super().delete(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -616,8 +610,8 @@ class AuditLog(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            raise ValidationError("Audit log entries are append-only.")
+            raise ValidationError("稽核紀錄只能新增，不可修改。")
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise ValidationError("Audit log entries are append-only.")
+        raise ValidationError("稽核紀錄只能新增，不可刪除。")

@@ -97,9 +97,7 @@ def dashboard(request):
                 "share_class": share_class,
                 "latest_nav": latest_nav,
                 "latest_report": latest_report,
-                "status": latest_report.get_status_display()
-                if latest_report
-                else "Commentary Required",
+                "status": latest_report.status if latest_report else "COMMENTARY_REQUIRED",
             }
         )
     return render(request, "navapp/dashboard.html", {"cards": cards})
@@ -114,10 +112,10 @@ def fund_list(request):
 def fund_edit(request, pk=None):
     instance = get_object_or_404(Fund, pk=pk) if pk else Fund()
     formsets = [
-        ("strategies", "Strategy Highlights", StrategyFormSet),
-        ("parties", "Fund Parties", PartyFormSet),
-        ("terms", "Fund Terms", TermFormSet),
-        ("contacts", "Report Contacts", ContactFormSet),
+        ("strategies", "策略重點", StrategyFormSet),
+        ("parties", "基金相關機構", PartyFormSet),
+        ("terms", "基金條款", TermFormSet),
+        ("contacts", "報告聯絡資料", ContactFormSet),
     ]
     if request.method == "POST":
         form = FundForm(request.POST, request.FILES, instance=instance)
@@ -149,14 +147,14 @@ def fund_edit(request, pk=None):
                     stale_count = mark_fund_reports_stale(
                         fund,
                         request.user,
-                        "Fund settings changed: " + ", ".join(changed_fields + related_changed),
+                        "基金設定已變更：" + "、".join(changed_fields + related_changed),
                     )
                     if stale_count:
                         messages.warning(
                             request,
-                            f"{stale_count} finalized report(s) were marked stale.",
+                            f"已有 {stale_count} 份已定稿報告被標示為需要重新產生。",
                         )
-            messages.success(request, "Fund settings saved.")
+            messages.success(request, "基金設定已儲存。")
             return redirect("fund-edit", pk=fund.pk)
     else:
         form = FundForm(instance=instance)
@@ -200,21 +198,21 @@ def share_class_edit(request, fund_pk, pk=None):
                     stale_count = mark_share_class_reports_stale(
                         share_class,
                         request.user,
-                        "Share-class settings changed: " + ", ".join(changed_fields),
+                        "股份類別設定已變更：" + "、".join(changed_fields),
                     )
                     if stale_count:
                         messages.warning(
                             request,
-                            f"{stale_count} finalized report(s) were marked stale.",
+                            f"已有 {stale_count} 份已定稿報告被標示為需要重新產生。",
                         )
-            messages.success(request, "Share class saved.")
+            messages.success(request, "股份類別已儲存。")
             return redirect("nav-history", pk=share_class.pk)
     else:
         form = ShareClassForm(instance=instance)
     return render(
         request,
         "navapp/generic_form.html",
-        {"form": form, "title": "Share Class", "subtitle": fund.display_name},
+        {"form": form, "title": "股份類別", "subtitle": fund.display_name},
     )
 
 
@@ -278,20 +276,20 @@ def nav_edit(request, share_class_pk, pk=None):
                         if stale_count:
                             messages.warning(
                                 request,
-                                f"{stale_count} finalized report(s) were marked stale.",
+                                f"已有 {stale_count} 份已定稿報告被標示為需要重新產生。",
                             )
             except ValidationError as exc:
                 detail = "; ".join(exc.messages)
                 if "unique_active_nav_month" in detail:
-                    detail = "An active NAV record already exists for this share class and month."
+                    detail = "此股份類別在該月份已存在一筆有效 NAV 紀錄。"
                 form.add_error(None, detail)
             except IntegrityError:
                 form.add_error(
                     None,
-                    "An active NAV record already exists for this share class and month.",
+                    "此股份類別在該月份已存在一筆有效 NAV 紀錄。",
                 )
             else:
-                messages.success(request, "NAV record saved.")
+                messages.success(request, "NAV 紀錄已儲存。")
                 return redirect("nav-history", pk=share_class.pk)
     else:
         form = NAVRecordForm(instance=instance, share_class=share_class)
@@ -347,10 +345,10 @@ def bulk_import(request, pk):
                 action="BULK_NAV_IMPORT",
                 after_json=result,
             )
-            messages.success(request, f"Imported {result['created']} NAV rows.")
+            messages.success(request, f"已匯入 {result['created']} 筆 NAV 紀錄。")
             return redirect("nav-history", pk=share_class.pk)
         except (KeyError, signing.BadSignature, ImportValidationError) as exc:
-            messages.error(request, f"Import confirmation failed: {exc}")
+            messages.error(request, f"確認匯入失敗：{exc}")
     return render(
         request,
         "navapp/bulk_import.html",
@@ -392,7 +390,7 @@ def report_create(request):
             return redirect("report-review", pk=report.pk)
     else:
         form = ReportCreateForm()
-    return render(request, "navapp/generic_form.html", {"form": form, "title": "Create Report"})
+    return render(request, "navapp/generic_form.html", {"form": form, "title": "建立季度報告"})
 
 
 def _report_snapshot_for_display(report: QuarterlyReport) -> dict[str, object]:
@@ -464,7 +462,7 @@ def report_refresh_rfr(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     try:
         refresh_report_rfr(report)
-        messages.success(request, "RFR observations refreshed.")
+        messages.success(request, "無風險利率觀察值已更新。")
     except (RFRProviderError, RFRValidationError) as exc:
         messages.error(request, str(exc))
     return redirect("report-review", pk=pk)
@@ -491,11 +489,11 @@ def report_manual_rfr(request, pk):
                 after_json={"annual_value_decimal": str(snapshot.annual_value_decimal)},
                 reason=snapshot.override_reason,
             )
-            messages.warning(request, "Manual RFR override recorded.")
+            messages.warning(request, "已記錄手動無風險利率覆寫。")
         except RFRValidationError as exc:
             messages.error(request, str(exc))
     else:
-        messages.error(request, "Manual RFR value and reason are required.")
+        messages.error(request, "必須填寫手動無風險利率及覆寫原因。")
     return redirect("report-review", pk=pk)
 
 
@@ -503,13 +501,13 @@ def report_manual_rfr(request, pk):
 def report_commentary(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        messages.error(request, "Finalized report commentary is immutable; create a new version.")
+        messages.error(request, "已定稿報告的評論不可修改；請建立新版本。")
         return redirect("report-review", pk=pk)
     if request.method == "POST":
         form = CommentaryForm(request.POST, instance=report)
         if form.is_valid():
             form.save()
-            messages.success(request, "Manager Commentary saved.")
+            messages.success(request, "基金經理評論已儲存。")
             return redirect("report-preview", pk=pk)
     else:
         form = CommentaryForm(instance=report)
@@ -564,9 +562,9 @@ def report_generate(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     try:
         generate_report_files(report, request.user)
-        messages.success(request, "Word and PDF reports generated.")
+        messages.success(request, "Word 及 PDF 報告已產生。")
     except (ReportGenerationError, CalculationValidationError) as exc:
-        messages.error(request, f"Generation failed: {exc}")
+        messages.error(request, f"產生報告失敗：{exc}")
     return redirect("report-review", pk=pk)
 
 
@@ -576,9 +574,9 @@ def report_finalize(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     try:
         finalize_report(report, request.user)
-        messages.success(request, "Report finalized. Snapshot and files are now immutable.")
+        messages.success(request, "報告已定稿，快照及檔案現已鎖定，不可修改。")
     except ValidationError as exc:
-        messages.error(request, "Finalization blocked: " + "; ".join(exc.messages))
+        messages.error(request, "無法定稿：" + "; ".join(exc.messages))
     return redirect("report-review", pk=pk)
 
 
@@ -636,21 +634,21 @@ def organization_settings(request):
                     stale_count = mark_organization_reports_stale(
                         organization,
                         request.user,
-                        "Organization settings changed: " + ", ".join(changed_fields),
+                        "機構設定已變更：" + "、".join(changed_fields),
                     )
                     if stale_count:
                         messages.warning(
                             request,
-                            f"{stale_count} finalized report(s) were marked stale.",
+                            f"已有 {stale_count} 份已定稿報告被標示為需要重新產生。",
                         )
-            messages.success(request, "Organization settings saved.")
+            messages.success(request, "機構設定已儲存。")
             return redirect("organization-settings")
     else:
         form = OrganizationSettingsForm(instance=instance)
     return render(
         request,
         "navapp/generic_form.html",
-        {"form": form, "title": "Organization Settings"},
+        {"form": form, "title": "機構設定"},
     )
 
 

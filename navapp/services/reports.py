@@ -182,7 +182,7 @@ def audit_docx_package(path: Path) -> dict[str, object]:
 
 def validate_custom_template(path: Path) -> None:
     if path.suffix.lower() != ".docx" or not path.is_file():
-        raise ReportGenerationError("Custom template must be a readable .docx file.")
+        raise ReportGenerationError("自訂範本必須是可讀取的 .docx 檔案。")
     try:
         with ZipFile(path) as archive:
             document_xml = archive.read("word/document.xml").decode("utf-8", errors="ignore")
@@ -192,17 +192,15 @@ def validate_custom_template(path: Path) -> None:
                 if name.endswith(".xml")
             )
     except (KeyError, OSError) as exc:
-        raise ReportGenerationError(f"Invalid custom DOCX package: {exc}") from exc
+        raise ReportGenerationError(f"自訂 DOCX 封裝無效：{exc}") from exc
     missing = [name for name in REQUIRED_CUSTOM_PLACEHOLDERS if name not in package_text]
     if missing:
-        raise ReportGenerationError(
-            "Custom template is missing required placeholders: " + ", ".join(sorted(missing))
-        )
+        raise ReportGenerationError("自訂範本缺少必要的預留位置：" + ", ".join(sorted(missing)))
     if "{{" not in document_xml and "{%" not in document_xml:
-        raise ReportGenerationError("Custom template does not contain docxtpl placeholders.")
+        raise ReportGenerationError("自訂範本不包含 docxtpl 預留位置。")
     external = external_excel_relationships(path)
     if external:
-        raise ReportGenerationError("Custom template contains an external Excel relationship.")
+        raise ReportGenerationError("自訂範本包含外部 Excel 關聯。")
 
 
 def build_current_snapshot(report: QuarterlyReport) -> dict[str, object]:
@@ -415,7 +413,7 @@ def _shade_cell(cell, fill: str) -> None:
 
 def _set_table_geometry(table, widths: list[int], total_width: int = 9864) -> None:
     if sum(widths) != total_width:
-        raise ReportGenerationError("DOCX table column widths must equal the content width.")
+        raise ReportGenerationError("DOCX 表格欄寬總和必須等於內容寬度。")
     table.alignment = WD_TABLE_ALIGNMENT.LEFT
     table.autofit = False
     tbl_pr = table._tbl.tblPr
@@ -755,9 +753,7 @@ def build_custom_docx(
 def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
     binary = shutil.which(settings.LIBREOFFICE_BINARY)
     if not binary:
-        raise ReportGenerationError(
-            f"LibreOffice executable {settings.LIBREOFFICE_BINARY!r} was not found."
-        )
+        raise ReportGenerationError(f"找不到 LibreOffice 執行檔 {settings.LIBREOFFICE_BINARY!r}。")
     output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="nav-lo-profile-") as profile:
         profile_uri = Path(profile).resolve().as_uri()
@@ -780,11 +776,11 @@ def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
                 timeout=settings.REPORT_CONVERSION_TIMEOUT,
             )
         except subprocess.TimeoutExpired as exc:
-            raise ReportGenerationError("LibreOffice PDF conversion timed out.") from exc
+            raise ReportGenerationError("LibreOffice PDF 轉換逾時。") from exc
     pdf_path = output_dir / f"{docx_path.stem}.pdf"
     if result.returncode != 0 or not pdf_path.exists() or pdf_path.stat().st_size == 0:
         raise ReportGenerationError(
-            "LibreOffice PDF conversion failed: "
+            "LibreOffice PDF 轉換失敗："
             f"stdout={result.stdout[-1000:]} stderr={result.stderr[-1000:]}"
         )
     return pdf_path
@@ -807,7 +803,7 @@ def _save_generated_file(report: QuarterlyReport, file_type: str, path: Path) ->
 
 def generate_report_files(report: QuarterlyReport, actor=None) -> list[GeneratedFile]:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        raise ReportGenerationError("Finalized report files are immutable; create a new version.")
+        raise ReportGenerationError("已定稿報告的檔案不可修改；請建立新版本。")
     try:
         snapshot = build_current_snapshot(report)
         report.snapshot = snapshot
@@ -828,7 +824,7 @@ def generate_report_files(report: QuarterlyReport, actor=None) -> list[Generated
         else:
             build_builtin_docx(snapshot, chart_path, docx_path)
         if external_excel_relationships(docx_path):
-            raise ReportGenerationError("Generated DOCX contains an external Excel relationship.")
+            raise ReportGenerationError("產生的 DOCX 包含外部 Excel 關聯。")
         with transaction.atomic():
             docx_file = _save_generated_file(report, GeneratedFile.FileType.DOCX, docx_path)
             AuditLog.objects.create(
@@ -863,17 +859,17 @@ def generate_report_files(report: QuarterlyReport, actor=None) -> list[Generated
 def finalization_issues(report: QuarterlyReport) -> list[str]:
     issues: list[str] = []
     required_values = {
-        "Fund legal name": report.fund.legal_name,
-        "Fund display name": report.fund.display_name,
-        "Fund structure": report.fund.structure,
-        "Fund domicile": report.fund.domicile,
-        "Investment objective": report.fund.investment_objective,
-        "Share-class name": report.share_class.name,
-        "Share-class currency": report.share_class.currency,
+        "基金法定名稱": report.fund.legal_name,
+        "基金顯示名稱": report.fund.display_name,
+        "基金架構": report.fund.structure,
+        "基金註冊地": report.fund.domicile,
+        "投資目標": report.fund.investment_objective,
+        "股份類別名稱": report.share_class.name,
+        "股份類別貨幣": report.share_class.currency,
     }
-    issues.extend(f"{label} is required." for label, value in required_values.items() if not value)
+    issues.extend(f"必須填寫{label}。" for label, value in required_values.items() if not value)
     if not report.commentary_markdown.strip():
-        issues.append("Manager Commentary is required.")
+        issues.append("必須填寫基金經理評論。")
     try:
         calculate_for_report(report)
     except CalculationValidationError as exc:
@@ -883,27 +879,27 @@ def finalization_issues(report: QuarterlyReport) -> list[str]:
         if not rfr.is_manual:
             observations = list(rfr.observations.all())
             if len(observations) != 12:
-                issues.append("Exactly 12 RFR observations are required.")
+                issues.append("必須有正好 12 筆無風險利率觀察值。")
             elif (
                 observations[-1].observation_date.year != report.report_date.year
                 or observations[-1].observation_date.month != report.report_date.month
             ):
-                issues.append("RFR cutoff must match the report-end month.")
+                issues.append("無風險利率截止月份必須與報告結束月份相同。")
             if any(item.observation_date > report.report_date for item in observations):
-                issues.append("RFR observations cannot extend beyond report end.")
+                issues.append("無風險利率觀察日期不得超過報告截止日。")
         elif not rfr.override_reason.strip():
-            issues.append("Manual RFR override requires a reason.")
+            issues.append("手動覆寫無風險利率必須填寫原因。")
     except ObjectDoesNotExist:
-        issues.append("RFR snapshot is required.")
+        issues.append("必須建立無風險利率快照。")
     files = {item.file_type: item for item in report.files.all()}
     for file_type in (GeneratedFile.FileType.DOCX, GeneratedFile.FileType.PDF):
         item = files.get(file_type)
         if not item or not item.absolute_path.exists() or item.absolute_path.stat().st_size == 0:
-            issues.append(f"A non-empty {file_type} file is required.")
+            issues.append(f"必須有非空白的 {file_type} 檔案。")
         elif sha256_file(item.absolute_path) != item.sha256:
-            issues.append(f"Stored {file_type} file hash does not match the file.")
+            issues.append(f"已儲存的 {file_type} 檔案雜湊值與檔案不符。")
     if not report.snapshot:
-        issues.append("An immutable report snapshot is required.")
+        issues.append("必須建立不可修改的報告快照。")
     return issues
 
 
