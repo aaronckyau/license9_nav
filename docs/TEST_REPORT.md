@@ -55,6 +55,8 @@ Public /nav login/logout/static/health/readiness PASS
 
 「NAV 已是最新」狀態另加入 regression test，確認年份／月份、六位小數 NAV 及每筆編輯 URL 仍顯示。以本機真實 XSQ 資料在 1440×1000 與 390×844 驗證 48 個編輯入口：兩個 viewport 均無水平溢出、console error 為 0；既有月份編輯頁可載入原值及稽核原因欄。
 
+功能 commit `f35ae2b` 部署後，再由公開 HTTPS 入口確認最新 NAV 頁顯示 48 個編輯 URL，並成功只讀載入既有 NAV 的編輯表單、原值及稽核原因欄；production CSS、health/readiness 與三個容器 healthcheck 均通過，一次性 QA 帳號隨即刪除。
+
 ## XSQ report QA
 
 - `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.docx`：169009 bytes，SHA-256 `a0197b2eec664ecfeaa15f8c2aa12f9019f219c22d9567307f6f3929d8c36941`。

@@ -28,7 +28,7 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 
 本次按年份 NAV／報告頁評論 UX 已以 commit `0cde04b` 推送至 GitHub `main` 並部署至 production。部署後重新通過 migration check、三個容器 healthcheck、公開 health/readiness，以及一次性 QA 帳號的登入、基金首頁、NAV 輸入頁與報告評論頁檢查；QA 帳號已於檢查後刪除。
 
-2026-07-20 後續修正讓 NAV 已追到最近完成月份時仍保留完整年份／月份清單，每個既有月份均顯示 NAV 及「編輯」入口；本機 1440×1000、390×844 瀏覽器檢查及完整測試已通過，尚待另行授權 push／deployment。
+2026-07-20 後續修正讓 NAV 已追到最近完成月份時仍保留完整年份／月份清單，每個既有月份均顯示 NAV 及「編輯」入口；功能 commit `f35ae2b` 已推送並部署。本機 1440×1000、390×844 瀏覽器檢查及完整測試通過，production 亦以一次性 QA 帳號確認 48 個編輯入口及既有 NAV 編輯表單；帳號已刪除且未修改 NAV 資料。
 
 ## 外部驗證限制
 
