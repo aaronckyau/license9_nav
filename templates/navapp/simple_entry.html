@@ -23,12 +23,22 @@
 <form method="post" class="simple-entry-form">{% csrf_token %}
   <input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
   {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+{% else %}
+<div class="simple-entry-form">
+  <section class="panel latest-nav-status">
+    <div>
+      <h2>每月 NAV 已是最新</h2>
+      <p>截至 {{ default_period|date:"Y 年 n 月" }} 的月份均已有 NAV 紀錄。您仍可在下方查看或編輯既有月份。</p>
+    </div>
+    <a class="button primary" href="{% url 'report-history' %}">前往評論及產生報告</a>
+  </section>
+{% endif %}
   <div class="nav-year-list">
     {% for year_group in nav_years %}
-    <section class="panel nav-year-panel{% if year_group.year == next_period.year %} current{% endif %}">
+    <section class="panel nav-year-panel{% if next_period and year_group.year == next_period.year %} current{% endif %}">
       <div class="nav-year-heading">
         <h2>{{ year_group.year }}</h2>
-        {% if year_group.year == next_period.year %}<span class="pill">目前輸入年度</span>{% endif %}
+        {% if next_period and year_group.year == next_period.year %}<span class="pill">目前輸入年度</span>{% endif %}
       </div>
       <div class="monthly-nav-grid">
         {% for month in year_group.months %}
@@ -43,6 +53,7 @@
           <div class="month-nav-cell completed-month">
             <span>{{ month.month }} 月</span>
             <strong>{{ month.record.nav_per_share|nav_display:6 }}</strong>
+            <a href="{% url 'nav-edit' share_class.pk month.record.pk %}" aria-label="編輯 {{ year_group.year }} 年 {{ month.month }} 月 NAV">編輯</a>
           </div>
           {% endif %}
         {% endfor %}
@@ -50,13 +61,10 @@
     </section>
     {% endfor %}
   </div>
+{% if next_period %}
   <p class="muted entry-help">系統只開放最早缺少的月份，避免跳月及重複紀錄。輸入季末月份後，下一步會前往填寫基金經理評論及產生報告。</p>
 </form>
 {% else %}
-<section class="panel empty-state">
-  <h2>每月 NAV 已是最新</h2>
-  <p>截至 {{ default_period|date:"Y 年 n 月" }} 的月份均已有 NAV 紀錄。</p>
-  <a class="button primary" href="{% url 'report-history' %}">前往評論及產生報告</a>
-</section>
+</div>
 {% endif %}
 {% endblock %}

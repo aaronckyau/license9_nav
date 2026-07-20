@@ -287,6 +287,57 @@ def test_simple_nav_entry_lists_existing_months_and_next_missing_month(
 
 
 @pytest.mark.django_db
+def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
+    client, django_user_model, monkeypatch
+):
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2025, 4, 20))
+    user = django_user_model.objects.create_user("latest-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Latest Fund LPF",
+        display_name="Latest Fund",
+        short_code="latest-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Latest objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="latest-a",
+        inception_date=date(2025, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    records = []
+    for month, day, value in ((1, 31, "40"), (2, 28, "69"), (3, 31, "75")):
+        records.append(
+            NAVRecord.objects.create(
+                share_class=share,
+                valuation_month=date(2025, month, day),
+                valuation_date=date(2025, month, day),
+                nav_per_share=Decimal(value),
+                created_by=user,
+                updated_by=user,
+            )
+        )
+
+    response = client.get(reverse("simple-entry", args=[share.pk]))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert response.context["next_period"] is None
+    assert "每月 NAV 已是最新" in content
+    assert "2025" in content
+    for record in records:
+        assert f"{record.valuation_month.month} 月" in content
+        assert reverse("nav-edit", args=[share.pk, record.pk]) in content
+    assert "40.000000" in content
+    assert "69.000000" in content
+    assert "75.000000" in content
+
+
+@pytest.mark.django_db
 def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
     client, django_user_model, monkeypatch
 ):

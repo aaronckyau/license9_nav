@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 40 passed, 1 skipped
+pytest -q                                         PASS: 41 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -52,6 +52,8 @@ Public /nav login/logout/static/health/readiness PASS
 2026-07-20 最新 UX 增量另以 in-app Edge 驗證按年份 NAV 頁及報告評論卡：1440×1000、1024×900、390×844 均無水平溢出。實際瀏覽器操作成功新增 2025 年 4 月 NAV `151.250000` 並開放 5 月，也成功在指定 report/version 儲存評論後進入產生流程。8 張有效截圖位於 `artifacts/visual-qa-zh/workflow-v2-*.png`。
 
 功能 commit `0cde04b` 部署後，再由公開 HTTPS 入口以一次性 QA 帳號驗證登入、基金首頁、`/nav/classes/1/entry/` 與 `/nav/reports/`；頁面均顯示新版繁體中文工作流，一次性帳號隨即刪除，未寫入基金、NAV 或報告資料。
+
+「NAV 已是最新」狀態另加入 regression test，確認年份／月份、六位小數 NAV 及每筆編輯 URL 仍顯示。以本機真實 XSQ 資料在 1440×1000 與 390×844 驗證 48 個編輯入口：兩個 viewport 均無水平溢出、console error 為 0；既有月份編輯頁可載入原值及稽核原因欄。
 
 ## XSQ report QA
 
