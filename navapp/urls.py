@@ -21,6 +21,11 @@ urlpatterns = [
         views.simple_entry,
         name="simple-entry",
     ),
+    path(
+        "classes/<int:share_class_pk>/nav/chart/<int:year>/",
+        views.nav_year_chart,
+        name="nav-year-chart",
+    ),
     path("classes/<int:share_class_pk>/nav/new/", views.nav_edit, name="nav-create"),
     path(
         "classes/<int:share_class_pk>/nav/<int:pk>/edit/",

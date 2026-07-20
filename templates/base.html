@@ -8,7 +8,7 @@
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <a class="skip-link" href="#main-content">跳至主要內容</a>
   <header class="site-header">
     <a class="brand" href="{% url 'dashboard' %}">

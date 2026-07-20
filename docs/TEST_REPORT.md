@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 41 passed, 1 skipped
+pytest -q                                         PASS: 44 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -83,3 +83,14 @@ docker compose --env-file .env.example config --quiet
 ```
 
 Playwright 使用 bundled Node、`NODE_PATH` 與 Edge executable，`QA_BASE_URL=http://127.0.0.1:8018`；密碼每次以 GUID 輪替，未保存或交付預設 credential。
+
+## 年度 NAV 儀表板驗證（2026-07-20）
+
+- `tests/test_imports_models_web.py`：覆蓋上一年度 12 月基準、無基準 fallback、首筆「—」、正負月回報／累積回報、FY／YTD、6 位 NAV、12 個月份、全部編輯 URL、圖表驗證、登入保護、404、no-store 及原有編輯表單。
+- 實際 XSQ 本機資料：5 個年度、48 個 NAV 編輯入口及 5 張年度圖表均成功載入；瀏覽器主控台 error 為 0。
+- 1440×1000：摘要／圖表約 32%／68%，六欄表格完整，無水平溢位。
+- 1024×900：摘要改為 2×2，圖表及表格垂直排列，無水平溢位。
+- 390×844：摘要 2 欄，月份轉為卡片，編輯按鈕 96×44px，手機圖表完整載入，無水平溢位。
+- 360×800：摘要 1 欄，月份卡片及 44px 編輯目標完整，無水平溢位。
+- 另以超長基金／股份類別名稱做臨時本機資料 QA，360px 可自然換行且無水平溢位；驗證後依正確關聯順序刪除臨時資料，未修改正式 XSQ NAV。
+- 視覺證據位於 `artifacts/visual-qa-zh/nav-dashboard-*.png`。

@@ -26,3 +26,5 @@
 22. 三步流程的官方 RFR 是自動模式：organization 選 FRED 但未設定 optional `FRED_API_KEY` 時，系統改用不需 key 的 U.S. Treasury 10-year 官方資料。操作者明確指定 FRED 時不 fallback，仍要求 key。
 23. yfinance 的 `^TNX` 可作參考性 10 年期利率資料，但 yfinance 明示其未獲 Yahoo 認可且資料介面只供個人／研究用途，因此不作權威報告來源。Production 繼續使用 U.S. Treasury 官方 `BC_10YEAR`，FRED `DGS10` 為可選官方來源。
 24. `READY` 報告已具有可下載產物；若在報告頁修改評論，系統建立下一個 draft version，再保存或產生，不會覆寫舊 version 的評論、snapshot 或檔案。`DRAFT`／`GENERATION_FAILED` 尚未形成可交付版本，可在原 version 繼續編輯。
+25. 年度 NAV 儀表板的首月回報優先使用上一年度 12 月 NAV 作基準。若無該筆資料，改以當年度首筆 NAV 作期間基準，頁面明確提示此 fallback，且首筆月回報及累積回報顯示「—」，不製造 0% 回報。這項規則只用於 NAV 輸入頁的展示分析，不改變 `legacy_excel_v1` 報告計算。
+26. 年度 NAV 圖表只在視覺繪製時把 `Decimal` 轉為浮點座標；所有表格數值、月回報、期間回報、最高及最低 NAV 均由後端以 `Decimal` 計算，並只在展示時四捨五入。

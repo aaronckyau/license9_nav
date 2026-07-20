@@ -1,70 +1,138 @@
 {% extends "base.html" %}
 {% load nav_tags %}
+{% block body_class %}nav-dashboard-body{% endblock %}
 {% block content %}
-<div class="page-heading simple-heading">
-  <div>
-    <p class="eyebrow">步驟 1</p>
-    <h1>輸入每股 NAV</h1>
-    <p class="muted">{{ share_class.fund.display_name }} · {{ share_class.name }} · {{ share_class.currency }}</p>
-  </div>
-  <a class="button ghost" href="{% url 'nav-history' share_class.pk %}">修正 NAV 歷史紀錄</a>
-</div>
-
-<section class="period-note" aria-label="NAV 月份說明">
-  <strong>系統日期：{{ system_date|date:"Y 年 n 月 j 日" }}</strong>
-  <span>最近已完成月份：{{ default_period|date:"Y 年 n 月" }}</span>
-</section>
-
-{% if form.non_field_errors or form.valuation_month.errors %}
-  <div class="error-summary">{{ form.non_field_errors }}{{ form.valuation_month.errors }}</div>
-{% endif %}
-
-{% if next_period %}
-<form method="post" class="simple-entry-form">{% csrf_token %}
-  <input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
-  {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
-{% else %}
-<div class="simple-entry-form">
-  <section class="panel latest-nav-status">
-    <div>
-      <h2>每月 NAV 已是最新</h2>
-      <p>截至 {{ default_period|date:"Y 年 n 月" }} 的月份均已有 NAV 紀錄。您仍可在下方查看或編輯既有月份。</p>
+<div class="nav-page">
+  <header class="nav-page-header">
+    <div class="nav-page-title">
+      <p class="eyebrow">步驟 1</p>
+      <h1>輸入每股 NAV</h1>
+      <p class="nav-fund-identity">
+        <strong>{{ share_class.fund.display_name }}</strong>
+        <span>{{ share_class.name }} · {{ share_class.currency }}</span>
+      </p>
     </div>
-    <a class="button primary" href="{% url 'report-history' %}">前往評論及產生報告</a>
+    <a class="button ghost nav-history-action" href="{% url 'nav-history' share_class.pk %}">修正 NAV 歷史紀錄</a>
+  </header>
+
+  <section class="nav-metadata" aria-label="NAV 月份說明">
+    <span>系統日期：{{ system_date|date:"Y 年 n 月 j 日" }}</span>
+    <span>最近已完成月份：{{ default_period|date:"Y 年 n 月" }}</span>
   </section>
-{% endif %}
-  <div class="nav-year-list">
-    {% for year_group in nav_years %}
-    <section class="panel nav-year-panel{% if next_period and year_group.year == next_period.year %} current{% endif %}">
-      <div class="nav-year-heading">
-        <h2>{{ year_group.year }}</h2>
-        {% if next_period and year_group.year == next_period.year %}<span class="pill">目前輸入年度</span>{% endif %}
-      </div>
-      <div class="monthly-nav-grid">
-        {% for month in year_group.months %}
-          {% if month.is_next %}
-          <div class="month-nav-cell next-month">
-            <label for="{{ form.nav_per_share.id_for_label }}"><span>{{ month.month }} 月</span><small>尚未輸入</small></label>
-            {{ form.nav_per_share }}
-            {{ form.nav_per_share.errors }}
-            <button class="button primary" type="submit">{% if form.large_change_warning %}確認數值並新增{% else %}新增月份{% endif %}</button>
-          </div>
-          {% else %}
-          <div class="month-nav-cell completed-month">
-            <span>{{ month.month }} 月</span>
-            <strong>{{ month.record.nav_per_share|nav_display:6 }}</strong>
-            <a href="{% url 'nav-edit' share_class.pk month.record.pk %}" aria-label="編輯 {{ year_group.year }} 年 {{ month.month }} 月 NAV">編輯</a>
-          </div>
-          {% endif %}
-        {% endfor %}
-      </div>
+
+  {% if form.non_field_errors or form.valuation_month.errors %}
+    <div class="error-summary">{{ form.non_field_errors }}{{ form.valuation_month.errors }}</div>
+  {% endif %}
+
+  {% if next_period %}
+  <form method="post" class="nav-dashboard-form">{% csrf_token %}
+    <input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
+    {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+    <section class="nav-entry-guidance" aria-label="下一個待輸入月份">
+      <span class="nav-guidance-dot" aria-hidden="true"></span>
+      <div><strong>下一個待輸入月份：{{ next_period|date:"Y 年 n 月" }}</strong><small>系統只開放最早缺少的月份，避免跳月及重複紀錄。</small></div>
     </section>
-    {% endfor %}
+  {% else %}
+  <div class="nav-dashboard-form">
+    <section class="nav-status-banner" aria-labelledby="nav-latest-title">
+      <div class="nav-status-content">
+        <span class="nav-status-icon" aria-hidden="true">✓</span>
+        <div>
+          <h2 id="nav-latest-title">每月 NAV 已是最新</h2>
+          <p>截至 {{ default_period|date:"Y 年 n 月" }}的月份均已有 NAV 紀錄。您仍可在下方查看或編輯既有月份。</p>
+        </div>
+      </div>
+      <a class="button primary nav-report-action" href="{% url 'report-history' %}">前往評論及產生報告 <span aria-hidden="true">→</span></a>
+    </section>
+  {% endif %}
+
+    <div class="nav-year-list">
+      {% for year_group in nav_years %}
+      <article class="nav-year-card" aria-labelledby="nav-year-{{ year_group.year }}">
+        <header class="nav-year-heading">
+          <h2 id="nav-year-{{ year_group.year }}">{{ year_group.year }}</h2>
+          {% if year_group.is_current_input_year %}<span class="pill">目前輸入年度</span>{% endif %}
+        </header>
+
+        <div class="nav-year-body">
+          <section class="nav-summary-grid" aria-label="{{ year_group.year }} 年 NAV 摘要">
+            <div class="nav-summary-item">
+              <span>最新 NAV（{{ year_group.latest_month_label }}）</span>
+              <strong>{{ year_group.latest_nav_display }}</strong>
+            </div>
+            <div class="nav-summary-item">
+              <span>{{ year_group.return_label }}</span>
+              <strong class="{{ year_group.period_return_class }}">{{ year_group.period_return_display }}</strong>
+              <small>{{ year_group.baseline_note }}</small>
+            </div>
+            <div class="nav-summary-item">
+              <span>期間最高</span>
+              <strong>{{ year_group.high_nav_display }}</strong>
+              <small>{{ year_group.high_month_label }}</small>
+            </div>
+            <div class="nav-summary-item">
+              <span>期間最低</span>
+              <strong>{{ year_group.low_nav_display }}</strong>
+              <small>{{ year_group.low_month_label }}</small>
+            </div>
+          </section>
+
+          <figure class="nav-chart-panel">
+            <figcaption class="nav-chart-header">
+              <h3>NAV 趨勢圖（{{ year_group.year }}）</h3>
+              <span>每股 NAV · {{ share_class.currency }}</span>
+            </figcaption>
+            <div class="nav-chart-container">
+              {% if year_group.has_records %}
+                <picture>
+                  <source media="(max-width: 720px)" srcset="{% url 'nav-year-chart' share_class.pk year_group.year %}?layout=mobile">
+                  <img class="nav-year-chart-image" src="{% url 'nav-year-chart' share_class.pk year_group.year %}" alt="{{ year_group.year }} 年度每月每股 NAV 趨勢折線圖；完整數值見下方資料表。">
+                </picture>
+              {% else %}
+                <div class="nav-chart-empty">輸入首筆 NAV 後顯示趨勢圖。</div>
+              {% endif %}
+            </div>
+          </figure>
+        </div>
+
+        <div class="nav-table-wrap">
+          <table class="nav-dashboard-table">
+            <caption class="sr-only">{{ year_group.year }} 年每月 NAV、回報、狀態及編輯操作</caption>
+            <thead>
+              <tr><th>月份</th><th class="numeric">NAV（每股）</th><th class="numeric">月度回報</th><th class="numeric">累積回報</th><th>狀態</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              {% for month in year_group.months %}
+              <tr data-year="{{ year_group.year }}" data-month-row{% if month.is_next %} class="nav-pending-row"{% endif %}>
+                <td class="nav-month-cell" data-label="月份"><strong>{{ month.month }} 月</strong></td>
+                {% if month.is_next %}
+                  <td class="nav-value-cell numeric" data-label="NAV（每股）">{{ form.nav_per_share }}{{ form.nav_per_share.errors }}</td>
+                  <td class="nav-monthly-return numeric nav-return-neutral" data-label="月度回報">—</td>
+                  <td class="nav-cumulative-return numeric nav-return-neutral" data-label="累積回報">—</td>
+                  <td class="nav-status-cell" data-label="狀態"><span class="nav-status-pill pending">待輸入</span></td>
+                  <td class="nav-action-cell" data-label="操作"><button class="button primary nav-add-button" type="submit">{% if form.large_change_warning %}確認數值並新增{% else %}新增月份{% endif %}</button></td>
+                {% else %}
+                  <td class="nav-value-cell numeric" data-label="NAV（每股）">{{ month.nav_display }}</td>
+                  <td class="nav-monthly-return numeric {{ month.monthly_return_class }}" data-label="月度回報">{{ month.monthly_return_display }}</td>
+                  <td class="nav-cumulative-return numeric {{ month.cumulative_return_class }}" data-label="累積回報">{{ month.cumulative_return_display }}</td>
+                  <td class="nav-status-cell" data-label="狀態"><span class="nav-status-pill">已完成</span></td>
+                  <td class="nav-action-cell" data-label="操作"><a class="nav-edit-link" href="{% url 'nav-edit' share_class.pk month.record.pk %}" aria-label="編輯 {{ year_group.year }} 年 {{ month.month }} 月 NAV">編輯</a></td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+      {% empty %}
+      <section class="panel empty-state"><h2>尚無 NAV 紀錄</h2><p>新增第一個月份後，系統會顯示年度摘要、趨勢圖及每月回報。</p></section>
+      {% endfor %}
+    </div>
+
+  {% if next_period %}
+  </form>
+  {% else %}
   </div>
-{% if next_period %}
-  <p class="muted entry-help">系統只開放最早缺少的月份，避免跳月及重複紀錄。輸入季末月份後，下一步會前往填寫基金經理評論及產生報告。</p>
-</form>
-{% else %}
+  {% endif %}
 </div>
-{% endif %}
 {% endblock %}

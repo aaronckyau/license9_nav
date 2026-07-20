@@ -23,6 +23,7 @@ def test_nav_subpath_reverse_and_cookie_settings(settings):
         assert reverse("dashboard") == "/nav/"
         assert reverse("login") == "/nav/accounts/login/"
         assert reverse("report-history") == "/nav/reports/"
+        assert reverse("nav-year-chart", args=[1, 2026]) == "/nav/classes/1/nav/chart/2026/"
     finally:
         set_script_prefix(previous_prefix)
     assert settings.SESSION_COOKIE_NAME == "nav_sessionid"
@@ -335,6 +336,173 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
     assert "40.000000" in content
     assert "69.000000" in content
     assert "75.000000" in content
+
+
+@pytest.mark.django_db
+def test_nav_dashboard_renders_yearly_metrics_returns_charts_and_all_months(
+    client, django_user_model, monkeypatch
+):
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2026, 3, 20))
+    user = django_user_model.objects.create_user("dashboard-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Dashboard Fund LPF",
+        display_name="Dashboard Fund",
+        short_code="dashboard-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Dashboard objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="dashboard-a",
+        inception_date=date(2024, 12, 1),
+        inception_nav=Decimal("80"),
+        currency="USD",
+    )
+    values = [(2024, 12, "80")]
+    values.extend((2025, month, str(80 + month)) for month in range(1, 13))
+    values.extend(((2026, 1, "90"), (2026, 2, "99")))
+    records = []
+    for year, month, value in values:
+        valuation_month = date(
+            year,
+            month,
+            28 if month == 2 else 30 if month in {4, 6, 9, 11} else 31,
+        )
+        records.append(
+            NAVRecord.objects.create(
+                share_class=share,
+                valuation_month=valuation_month,
+                valuation_date=valuation_month,
+                nav_per_share=Decimal(value),
+                created_by=user,
+                updated_by=user,
+            )
+        )
+
+    response = client.get(reverse("simple-entry", args=[share.pk]))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert response.context["next_period"] is None
+    assert "最新 NAV（2026 年 2 月）" in content
+    assert "年初至今回報（YTD）" in content
+    assert "+7.61%" in content
+    assert "全年度回報（FY）" in content
+    assert "+15.00%" in content
+    assert "-2.17%" in content
+    assert "+10.00%" in content
+    assert "nav-return-positive" in content
+    assert "nav-return-negative" in content
+    assert 'data-year="2025"' in content
+    assert content.count('data-year="2025" data-month-row') == 12
+    assert "99.000000" in content
+    assert reverse("nav-year-chart", args=[share.pk, 2025]) in content
+    assert reverse("nav-year-chart", args=[share.pk, 2026]) in content
+    for record in records:
+        assert reverse("nav-edit", args=[share.pk, record.pk]) in content
+
+
+@pytest.mark.django_db
+def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_return(
+    client, django_user_model, monkeypatch
+):
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2025, 4, 20))
+    user = django_user_model.objects.create_user("fallback-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Fallback Fund LPF",
+        display_name="Fallback Fund",
+        short_code="fallback-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Fallback objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="fallback-a",
+        inception_date=date(2025, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    for month, day, value in ((1, 31, "100"), (2, 28, "110"), (3, 31, "99")):
+        NAVRecord.objects.create(
+            share_class=share,
+            valuation_month=date(2025, month, day),
+            valuation_date=date(2025, month, day),
+            nav_per_share=Decimal(value),
+            created_by=user,
+            updated_by=user,
+        )
+
+    response = client.get(reverse("simple-entry", args=[share.pk]))
+    year = response.context["nav_years"][0]
+
+    assert response.status_code == 200
+    assert year.baseline_note == "無上一年度末 NAV；以 2025 年首筆 NAV 為基準"
+    assert year.period_return == Decimal("-0.01")
+    assert year.period_return_display == "-1.00%"
+    assert year.months[0].monthly_return is None
+    assert year.months[0].cumulative_return is None
+    assert year.months[0].monthly_return_display == "—"
+    assert year.months[1].monthly_return == Decimal("0.1")
+    assert year.months[1].cumulative_return == Decimal("0.1")
+    assert "無上一年度末 NAV；以 2025 年首筆 NAV 為基準" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_nav_year_chart_and_existing_edit_form_remain_authenticated(client, django_user_model):
+    user = django_user_model.objects.create_user("chart-user", password="safe-password")
+    fund = Fund.objects.create(
+        legal_name="Chart Fund LPF",
+        display_name="Chart Fund",
+        short_code="chart-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Chart objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="chart-a",
+        inception_date=date(2025, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    record = NAVRecord.objects.create(
+        share_class=share,
+        valuation_month=date(2025, 1, 31),
+        valuation_date=date(2025, 1, 31),
+        nav_per_share=Decimal("101.123456789"),
+        created_by=user,
+        updated_by=user,
+    )
+    chart_url = reverse("nav-year-chart", args=[share.pk, 2025])
+
+    unauthenticated = client.get(chart_url)
+    assert unauthenticated.status_code == 302
+    assert reverse("login") in unauthenticated.url
+
+    client.force_login(user)
+    chart = client.get(chart_url)
+    mobile_chart = client.get(f"{chart_url}?layout=mobile")
+    assert chart.status_code == 200
+    assert chart["Content-Type"] == "image/png"
+    assert chart["Cache-Control"] == "private, no-store"
+    assert chart.content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert mobile_chart.status_code == 200
+    assert mobile_chart.content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert mobile_chart.content != chart.content
+    assert client.get(reverse("nav-year-chart", args=[share.pk, 2024])).status_code == 404
+
+    edit = client.get(reverse("nav-edit", args=[share.pk, record.pk]))
+    assert edit.status_code == 200
+    assert edit.context["form"].instance == record
+    assert edit.context["form"]["nav_per_share"].value() == Decimal("101.123456789")
+    assert edit.context["reason_form"] is not None
 
 
 @pytest.mark.django_db

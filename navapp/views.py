@@ -53,6 +53,11 @@ from navapp.services.imports import (
     import_rows,
     parse_uploaded_nav,
 )
+from navapp.services.nav_dashboard import (
+    DashboardYear,
+    build_nav_dashboard_years,
+    generate_nav_year_chart,
+)
 from navapp.services.reports import (
     ReportGenerationError,
     build_current_snapshot,
@@ -272,25 +277,15 @@ def _draft_report_for_period(
     return report, True
 
 
-def _simple_nav_years(share_class: ShareClass, next_period: date | None) -> list[dict]:
-    grouped: dict[int, list[dict]] = {}
+def _simple_nav_years(
+    share_class: ShareClass, next_period: date | None, default_period: date
+) -> list[DashboardYear]:
     records = share_class.nav_records.filter(is_active=True).order_by("valuation_month")
-    for record in records:
-        grouped.setdefault(record.valuation_month.year, []).append(
-            {
-                "month": record.valuation_month.month,
-                "record": record,
-                "is_next": False,
-            }
-        )
-    if next_period:
-        grouped.setdefault(next_period.year, []).append(
-            {"month": next_period.month, "record": None, "is_next": True}
-        )
-    return [
-        {"year": year, "months": sorted(months, key=lambda item: item["month"])}
-        for year, months in sorted(grouped.items(), reverse=True)
-    ]
+    return build_nav_dashboard_years(
+        records,
+        next_period=next_period,
+        default_period=default_period,
+    )
 
 
 @login_required
@@ -372,9 +367,38 @@ def simple_entry(request, share_class_pk):
             "system_date": form.system_date,
             "default_period": form.default_period,
             "next_period": form.next_period,
-            "nav_years": _simple_nav_years(share_class, form.next_period),
+            "nav_years": _simple_nav_years(
+                share_class,
+                form.next_period,
+                form.default_period,
+            ),
         },
     )
+
+
+@login_required
+@require_GET
+def nav_year_chart(request, share_class_pk, year):
+    share_class = get_object_or_404(
+        ShareClass,
+        pk=share_class_pk,
+        is_active=True,
+        fund__is_active=True,
+    )
+    records = list(
+        share_class.nav_records.filter(
+            is_active=True,
+            valuation_month__year=year,
+        ).order_by("valuation_month")
+    )
+    if not records:
+        raise Http404("該年度沒有 NAV 紀錄。")
+    response = HttpResponse(
+        generate_nav_year_chart(records, mobile=request.GET.get("layout") == "mobile"),
+        content_type="image/png",
+    )
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 def _nav_json(item: NAVRecord) -> dict[str, str | int]:

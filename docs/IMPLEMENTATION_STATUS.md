@@ -17,7 +17,7 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - Commentary/preview/versioning、DOCX/PDF、hash、外部 relationship audit、final immutability/staleness/audit。
 - XSQ 45 筆 legacy workbook 匯入及 2026 Q1 真實樣本報表。
 - Dockerfile、Compose、Nginx、entrypoint、health checks、backup/restore、CI 與完整文件。
-- 41 passed、1 個因本機無 LibreOffice 而 skip；最新 NAV／報告評論介面另完成 1440、1024、390 三視窗與實際提交驗證，無水平溢出。
+- 44 passed、1 個因本機無 LibreOffice 而 skip；最新 NAV 年度儀表板另完成 1440、1024、390、360 四視窗實際驗證，無水平溢出。
 - GitHub `main`、VPS `/root/apps/license9_nav`、subpath `/nav` 與 loopback port `5430` 已部署。
 - VPS Docker image build、三個 healthy containers、migration、`check --deploy`、LibreOffice DOCX/PDF smoke 與 public login/logout 已通過。
 - 一般使用者網站已完整繁體中文化，包括登入、導覽、三步工作流程、表單、狀態、驗證訊息、績效檢視、RFR、評論、預覽、報告歷史及稽核頁；專有名詞及基金資料保留原文。
@@ -35,3 +35,12 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - 本機 Docker engine 仍因外部 Windows/WSL 問題無法使用；未修改主機設定。相同 image/build/runtime 已在 Contabo Ubuntu VPS 實際通過，因此不再阻礙 repository completion。
 - 本機無 LibreOffice，真實 LibreOffice pytest integration skip；VPS production image 的 LibreOffice DOCX→PDF smoke 已通過。
 - 本機 PDF 以可用 Word COM 唯讀匯出供視覺 QA，非 production dependency。
+
+## 年度 NAV 儀表板（2026-07-20）
+
+- 已把登入後的 NAV 輸入／歷史頁重整為按年份排列的專業基金管理儀表板；保留既有新增月份、編輯 NAV、異常變動確認、報告入口及稽核流程。
+- 每個年度顯示最新 NAV、FY／YTD／期間回報、年度最高及最低 NAV、月回報、累積回報，以及由伺服器產生的內嵌折線圖。
+- 權威顯示計算使用 `Decimal`；NAV 顯示 6 位小數，百分比顯示正負號及 2 位小數。上一年度 12 月基準缺少時會使用當年首筆 NAV 並明確提示，首筆回報維持「—」。
+- 圖表由 authenticated、`private, no-store` 的 PNG endpoint 即時提供；桌面及手機分別使用橫向／直向版面，不依賴前端 JavaScript 或公共 CDN。
+- 響應式版面已於 1440×1000、1024×900、390×844、360×800 實際檢查：無水平溢位，390px 顯示 2 欄摘要，360px 顯示 1 欄摘要，月資料轉為可讀卡片，編輯目標至少 44px。
+- 本次變更僅在本機完成及驗證，尚未推送 GitHub 或部署 production。
