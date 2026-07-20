@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 35 passed, 1 skipped
+pytest -q                                         PASS: 37 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -46,14 +46,14 @@ Public /nav login/logout/static/health/readiness  PASS
 
 `scripts/visual_qa.cjs` 以 Edge 執行 1440×1000、1024×900、390×844。結果：36 screenshots、30 inspections、0 horizontal overflow、0 escaped controls、0 console error、0 page error。JSON：`artifacts/visual-qa/visual-qa-results.json`；三張 contact sheets 與全部頁面截圖同目錄。
 
-繁體中文介面另以 in-app browser 重新檢查 10 個主要頁面 × 3 個 viewport，產生 30 張全頁截圖及 2 張首屏證據；0 horizontal overflow、0 核心英文操作標籤、0 舊術語「管理員評論」。結果：`artifacts/visual-qa-zh/visual-qa-results.json`。390px 首屏另以非 full-page viewport 截圖核對導覽及工作流程文字沒有被壓縮。
+最新三步流程以真實 Edge 重新檢查 11 個主要頁面 × 1440、1024、390 三個 viewport，加上登入／登出，共 39 張截圖及 33 次頁面 inspection；0 horizontal overflow、0 escaped control、0 console error、0 page error。結果：`artifacts/simple-workflow-qa/full-suite/visual-qa-results.json`。三個 `simple-entry-*.png` 已逐張檢查；首次檢查發現桌面送出列遮擋評論欄，修正後重跑全套通過。
 
 ## XSQ report QA
 
-- `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.docx`：169030 bytes，SHA-256 記錄於 audit JSON。
-- `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.pdf`：253634 bytes，4 頁 A4。
+- `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.docx`：169009 bytes，SHA-256 `a0197b2eec664ecfeaa15f8c2aa12f9019f219c22d9567307f6f3929d8c36941`。
+- `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.pdf`：252225 bytes，4 頁 A4；本機以 Word/WPS 相容 COM 唯讀匯出供視覺 QA。
 - DOCX audit：valid；2 embedded media；0 external/excel relationship；0 embedded spreadsheet；0 missing target；0 fixed row height。
-- `artifacts/report-render/XSQ_2026_Q1_page-1.png` 至 `page-4.png`：逐頁檢查通過。
+- `artifacts/report-render/XSQ_2026_Q1_page-1.png` 至 `page-4.png`：依使用者提供的 2026 Q1 DOCX 章節結構逐頁檢查通過；負百分比、三位 Sharpe precision、表格、內嵌圖表、評論、免責聲明及頁尾均正常。
 - 18 段 long-commentary fixture：6 頁 A4；評論自然跨頁，署名不孤立，information/disclaimer 新頁、footer 一致。
 - VPS production artifact：`/app/media/reports/1/v1/quarterly-report.docx` 與 `.pdf`；DOCX ZIP 完整、2 embedded media、0 external relationship；LibreOffice PDF 為 4 頁 A4、PDF 1.6。
 - 公開 smoke：`/nav`→`/nav/`、未登入 workflow→`/nav/accounts/login/`、login/logout、CSS、`healthz`、`readyz` 全部通過；已停用四個舊入口回傳 404。

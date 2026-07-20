@@ -11,6 +11,7 @@ from django.urls import get_script_prefix, reverse, set_script_prefix
 
 from navapp.models import AuditLog, Fund, NAVRecord, QuarterlyReport, ShareClass
 from navapp.services import reports
+from navapp.services.calculations import CalculationValidationError
 from navapp.services.imports import ImportValidationError, parse_legacy_xsq, validate_sequence
 from navapp.templatetags.nav_tags import choice_label, zh_date, zh_text
 
@@ -111,7 +112,7 @@ def test_user_interface_uses_traditional_chinese(client, django_user_model):
     client.force_login(user)
     dashboard = client.get(reverse("dashboard")).content.decode()
     assert "選擇基金" in dashboard
-    assert "建立季度報告" in dashboard
+    assert "輸入 NAV 及基金經理評論" in dashboard
     assert "基金經理評論" in dashboard
     assert "Dashboard" not in dashboard
     assert "Select Fund" not in dashboard
@@ -127,6 +128,178 @@ def test_dynamic_user_interface_text_uses_traditional_chinese():
     assert zh_text("Report end must be a calendar quarter end.") == "報告截止日必須為日曆季度末日。"
     assert zh_date("2026-03-31") == "2026 年 3 月 31 日"
     assert zh_text("Fund settings changed: short_code") == "基金設定已變更： short_code"
+
+
+@pytest.mark.django_db
+def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
+    client, django_user_model, monkeypatch
+):
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2026, 7, 20))
+    user = django_user_model.objects.create_user("simple-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Simple Fund LPF",
+        display_name="Simple Fund",
+        short_code="simple-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Simple objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="simple-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+
+    dashboard = client.get(reverse("dashboard"))
+    dashboard_text = dashboard.content.decode()
+    assert reverse("simple-entry", args=[share.pk]) in dashboard_text
+    assert "選擇基金" in dashboard_text
+    assert "輸入 NAV 及基金經理評論" in dashboard_text
+    assert "產生報告" in dashboard_text
+    assert "檢視績效" not in dashboard_text
+
+    entry = client.get(reverse("simple-entry", args=[share.pk]))
+    assert entry.status_code == 200
+    assert entry.context["form"]["year"].value() == 2026
+    assert entry.context["form"]["month"].value() == 6
+    assert "系統日期：2026 年 7 月 20 日" in entry.content.decode()
+    assert "預設為最近已完成月份：2026 年 6 月" in entry.content.decode()
+
+    future = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "year": "2026",
+            "month": "7",
+            "nav_per_share": "105",
+            "commentary_markdown": "未完成月份不可輸入。",
+        },
+    )
+    assert future.status_code == 200
+    assert "估值月份不得晚於最近已完成月份" in future.content.decode()
+    assert not NAVRecord.objects.filter(share_class=share).exists()
+
+    response = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "year": "2024",
+            "month": "3",
+            "nav_per_share": "105.123456",
+            "commentary_markdown": "本季維持嚴謹的風險管理。",
+        },
+    )
+    assert response.status_code == 302
+    nav = NAVRecord.objects.get(share_class=share)
+    assert nav.valuation_month == date(2024, 3, 31)
+    assert nav.valuation_date == date(2024, 3, 31)
+    assert nav.nav_per_share == Decimal("105.123456")
+    report = QuarterlyReport.objects.get(share_class=share)
+    assert report.year == 2024
+    assert report.quarter == 1
+    assert report.report_date == date(2024, 3, 31)
+    assert report.commentary_markdown == "本季維持嚴謹的風險管理。"
+    assert response.url == f"{reverse('report-history')}?report={report.pk}"
+    assert AuditLog.objects.filter(action="SIMPLE_ENTRY", entity_id=str(report.pk)).exists()
+    history = client.get(response.url)
+    assert history.status_code == 200
+    assert "系統會自動取得無風險利率" in history.content.decode()
+    assert reverse("report-generate", args=[report.pk]) in history.content.decode()
+    assert reverse("simple-entry", args=[share.pk]) in history.content.decode()
+
+    duplicate = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "year": "2024",
+            "month": "3",
+            "nav_per_share": "106",
+            "commentary_markdown": "不可覆蓋原有 NAV。",
+        },
+    )
+    assert duplicate.status_code == 200
+    assert "該月份已有 NAV 紀錄" in duplicate.content.decode()
+    assert NAVRecord.objects.filter(share_class=share).count() == 1
+
+    abnormal_payload = {
+        "year": "2024",
+        "month": "4",
+        "nav_per_share": "200",
+        "commentary_markdown": "四月市場回顧。",
+    }
+    abnormal = client.post(reverse("simple-entry", args=[share.pk]), abnormal_payload)
+    assert abnormal.status_code == 200
+    assert "請檢查數值；如確認正確，再按一次儲存" in abnormal.content.decode()
+    assert NAVRecord.objects.filter(share_class=share).count() == 1
+    confirmed = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        abnormal_payload | {"confirm_large_change": "1"},
+    )
+    assert confirmed.status_code == 302
+    assert confirmed.url == reverse("dashboard")
+    assert NAVRecord.objects.filter(share_class=share).count() == 2
+    assert NAVRecord.objects.get(valuation_month=date(2024, 4, 30)).change_acknowledged is True
+    q2_report = QuarterlyReport.objects.get(share_class=share, year=2024, quarter=2)
+    assert q2_report.commentary_date == date(2024, 4, 30)
+
+
+@pytest.mark.django_db
+def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
+    client, django_user_model, monkeypatch
+):
+    user = django_user_model.objects.create_user("generate-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Generate Fund LPF",
+        display_name="Generate Fund",
+        short_code="generate-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Generate objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="generate-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    report = QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        year=2024,
+        quarter=1,
+        report_date=date(2024, 3, 31),
+        commentary_markdown="Commentary",
+        created_by=user,
+    )
+    calls = []
+    monkeypatch.setattr(
+        "navapp.views.calculate_for_report", lambda item: calls.append(("calculate", item.pk))
+    )
+    monkeypatch.setattr("navapp.views.refresh_report_rfr", lambda item: calls.append(item.pk))
+    monkeypatch.setattr(
+        "navapp.views.generate_report_files", lambda item, actor: calls.append((item.pk, actor.pk))
+    )
+
+    response = client.post(reverse("report-generate", args=[report.pk]))
+    assert response.status_code == 302
+    assert response.url == f"{reverse('report-history')}?report={report.pk}"
+    assert calls == [("calculate", report.pk), report.pk, (report.pk, user.pk)]
+
+    calls.clear()
+
+    def reject_incomplete_quarter(item):
+        calls.append(("calculate", item.pk))
+        raise CalculationValidationError(["缺少估值月份：2024-02"])
+
+    monkeypatch.setattr("navapp.views.calculate_for_report", reject_incomplete_quarter)
+    incomplete = client.post(reverse("report-generate", args=[report.pk]), follow=True)
+    assert incomplete.status_code == 200
+    assert "缺少估值月份：2024-02" in incomplete.content.decode()
+    assert calls == [("calculate", report.pk)]
 
 
 @pytest.mark.django_db

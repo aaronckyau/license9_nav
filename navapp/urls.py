@@ -16,6 +16,11 @@ urlpatterns = [
         name="share-class-edit",
     ),
     path("classes/<int:pk>/nav/", views.nav_history, name="nav-history"),
+    path(
+        "classes/<int:share_class_pk>/entry/",
+        views.simple_entry,
+        name="simple-entry",
+    ),
     path("classes/<int:share_class_pk>/nav/new/", views.nav_edit, name="nav-create"),
     path(
         "classes/<int:share_class_pk>/nav/<int:pk>/edit/",

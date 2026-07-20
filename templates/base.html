@@ -17,13 +17,14 @@
     </a>
     {% if user.is_authenticated %}
       <nav aria-label="主要導覽">
-        <a href="{% url 'dashboard' %}">儀表板</a>
-        <a href="{% url 'fund-list' %}">基金</a>
-        <a href="{% url 'report-history' %}">報告</a>
-        <a href="{% url 'audit-log' %}">稽核紀錄</a>
-        <a href="{% url 'organization-settings' %}">系統設定</a>
+        <a href="{% url 'dashboard' %}">首頁</a>
+        <a href="{% url 'report-history' %}">報告紀錄</a>
       </nav>
       <div class="account-menu">
+        <details class="advanced-menu">
+          <summary>進階</summary>
+          <div><a href="{% url 'fund-list' %}">基金設定</a><a href="{% url 'audit-log' %}">稽核紀錄</a><a href="{% url 'organization-settings' %}">系統設定</a></div>
+        </details>
         <a href="{% url 'password_change' %}">{{ user.get_username }}</a>
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">登出</button></form>
       </div>
@@ -32,22 +33,20 @@
   {% if user.is_authenticated and report %}
     <nav class="workflow" aria-label="報告工作流程">
       <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
-      <a href="{% url 'fund-edit' report.fund_id %}"><b>1</b>基金設定</a>
-      <a href="{% url 'nav-history' report.share_class_id %}"><b>2</b>輸入 NAV</a>
-      <a href="{% url 'report-review' report.pk %}"><b>3</b>檢視績效</a>
-      <a href="{% url 'report-commentary' report.pk %}"><b>4</b>基金經理評論</a>
-      <a href="{% url 'report-preview' report.pk %}"><b>5</b>預覽</a>
-      <a href="{% url 'report-review' report.pk %}#generate"><b>6</b>產生報告</a>
+      <a href="{% url 'simple-entry' report.share_class_id %}"><b>1</b>輸入 NAV 及基金經理評論</a>
+      <a href="{% url 'report-history' %}?report={{ report.pk }}"><b>2</b>產生報告</a>
+    </nav>
+  {% elif user.is_authenticated and share_class %}
+    <nav class="workflow" aria-label="報告工作流程">
+      <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
+      <a href="{% url 'simple-entry' share_class.pk %}"><b>1</b>輸入 NAV 及基金經理評論</a>
+      <a href="{% url 'report-history' %}"><b>2</b>產生報告</a>
     </nav>
   {% elif user.is_authenticated %}
     <nav class="workflow" aria-label="應用程式工作流程">
       <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
-      <a href="{% url 'fund-list' %}"><b>1</b>基金設定</a>
-      <a href="{% url 'dashboard' %}"><b>2</b>輸入 NAV</a>
-      <a href="{% url 'report-history' %}"><b>3</b>檢視績效</a>
-      <a href="{% url 'report-history' %}"><b>4</b>基金經理評論</a>
-      <a href="{% url 'report-history' %}"><b>5</b>預覽</a>
-      <a href="{% url 'report-history' %}"><b>6</b>產生報告</a>
+      <a href="{% url 'dashboard' %}"><b>1</b>輸入 NAV 及基金經理評論</a>
+      <a href="{% url 'report-history' %}"><b>2</b>產生報告</a>
     </nav>
   {% endif %}
   <main id="main-content" class="page-shell">

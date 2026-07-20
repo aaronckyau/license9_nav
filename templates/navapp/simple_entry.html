@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading simple-heading">
+  <div>
+    <p class="eyebrow">步驟 1</p>
+    <h1>輸入 NAV 及基金經理評論</h1>
+    <p class="muted">{{ share_class.fund.display_name }} · {{ share_class.name }} · {{ share_class.currency }}</p>
+  </div>
+  <a class="button ghost" href="{% url 'nav-history' share_class.pk %}">查看 NAV 歷史紀錄</a>
+</div>
+
+<section class="period-note" aria-label="預設月份說明">
+  <strong>系統日期：{{ system_date|date:"Y 年 n 月 j 日" }}</strong>
+  <span>預設為最近已完成月份：{{ default_period|date:"Y 年 n 月" }}</span>
+</section>
+
+<form method="post" class="simple-entry-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="error-summary">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+
+  <section class="panel simple-step">
+    <span class="simple-step-number">1</span>
+    <div class="simple-step-content">
+      <h2>選擇月份</h2>
+      <p class="muted">選擇這筆 NAV 所屬的年份及月份。</p>
+      <div class="period-fields">
+        <div class="field">{{ form.year.label_tag }}{{ form.year }}{{ form.year.errors }}</div>
+        <div class="field">{{ form.month.label_tag }}{{ form.month }}{{ form.month.errors }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel simple-step">
+    <span class="simple-step-number">2</span>
+    <div class="simple-step-content">
+      <h2>輸入每股 NAV</h2>
+      <div class="field">{{ form.nav_per_share.label_tag }}{{ form.nav_per_share }}{% if form.nav_per_share.help_text %}<small>{{ form.nav_per_share.help_text }}</small>{% endif %}{{ form.nav_per_share.errors }}</div>
+    </div>
+  </section>
+
+  <section class="panel simple-step">
+    <span class="simple-step-number">3</span>
+    <div class="simple-step-content">
+      <h2>輸入基金經理評論</h2>
+      <div class="field">{{ form.commentary_markdown.label_tag }}{{ form.commentary_markdown }}{% if form.commentary_markdown.help_text %}<small>{{ form.commentary_markdown.help_text }}</small>{% endif %}{{ form.commentary_markdown.errors }}</div>
+    </div>
+  </section>
+
+  <div class="simple-submit-bar">
+    <p><strong>下一步：</strong>季末月份會前往產生報告；其他月份儲存後返回基金清單。</p>
+    <button class="button primary" type="submit">{% if form.large_change_warning %}確認數值並儲存{% else %}儲存 NAV 及評論{% endif %}</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,6 +1,6 @@
 # NAV Quarterly Report App
 
-內部多基金 NAV 季報系統。一般使用者透過自訂工作流程管理基金與 share class、輸入月度 NAV、檢視 `legacy_excel_v1` 績效、取得或覆寫 RFR、編寫 Manager Commentary、預覽及產生有版本的 DOCX/PDF。Django Admin 僅供受信任的系統管理與資料修正。
+內部多基金 NAV 季報系統。基金完成設定後，一般使用者只需依「選擇基金 → 輸入月份、NAV 與基金經理評論 → 產生報告」三步完成月結；系統自動取得 RFR、執行 `legacy_excel_v1` 計算並產生有版本的 DOCX/PDF。基金設定、績效檢查、手動 RFR、預覽及定稿仍保留在進階頁面；Django Admin 僅供受信任的系統管理與資料修正。
 
 ## 本機啟動（Windows PowerShell）
 
@@ -63,7 +63,7 @@ python manage.py generate_sample_report
 python scripts/inspect_docx.py media/reports/1/v1/quarterly-report.docx
 ```
 
-樣本成品位於 `artifacts/sample-reports/`；本次逐頁渲染與三視窗 UI 證據位於 `artifacts/report-render/`、`artifacts/visual-qa/`。
+樣本成品位於 `artifacts/sample-reports/`；逐頁渲染及 UI 證據位於 `artifacts/report-render/`、`artifacts/visual-qa/` 與 `artifacts/simple-workflow-qa/`。
 
 ## 品質閘門
 

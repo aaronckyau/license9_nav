@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from zipfile import BadZipFile, ZipFile
 
@@ -9,6 +9,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.forms import inlineformset_factory
+from django.utils import timezone
 
 from navapp.models import (
     Contact,
@@ -419,6 +420,98 @@ class CommentaryForm(forms.ModelForm):
         if not value.strip():
             raise forms.ValidationError("必須填寫基金經理評論。")
         return value
+
+
+def latest_completed_month(today: date | None = None) -> date:
+    today = today or timezone.localdate()
+    if today == month_end(today):
+        return today
+    return date(today.year, today.month, 1) - timedelta(days=1)
+
+
+class SimpleEntryForm(forms.Form):
+    year = forms.TypedChoiceField(label="年份", coerce=int)
+    month = forms.TypedChoiceField(
+        label="月份",
+        coerce=int,
+        choices=[(month, f"{month} 月") for month in range(1, 13)],
+    )
+    nav_per_share = forms.DecimalField(
+        label="每股 NAV",
+        max_digits=38,
+        decimal_places=18,
+        min_value=Decimal("0.000000000000000001"),
+        help_text="請輸入該月份正式的每股 NAV。",
+    )
+    commentary_markdown = forms.CharField(
+        label="基金經理評論",
+        widget=forms.Textarea(attrs={"rows": 10}),
+        help_text="支援段落、粗體、斜體、項目符號及編號清單。",
+    )
+    confirm_large_change = forms.BooleanField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, share_class: ShareClass, **kwargs):
+        self.share_class = share_class
+        self.system_date = timezone.localdate()
+        self.default_period = latest_completed_month(self.system_date)
+        self.large_change_warning = ""
+        kwargs.setdefault(
+            "initial",
+            {"year": self.default_period.year, "month": self.default_period.month},
+        )
+        super().__init__(*args, **kwargs)
+        first_year = min(self.share_class.inception_date.year, self.default_period.year)
+        last_year = self.default_period.year
+        self.fields["year"].choices = [
+            (year, str(year)) for year in range(last_year, first_year - 1, -1)
+        ]
+
+    def clean_commentary_markdown(self):
+        value = self.cleaned_data["commentary_markdown"]
+        if re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
+            raise forms.ValidationError("不支援原始 HTML，請使用安全的 Markdown 語法。")
+        return value.strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        year = cleaned.get("year")
+        month = cleaned.get("month")
+        nav_value = cleaned.get("nav_per_share")
+        if not year or not month:
+            return cleaned
+        valuation_month = month_end(date(year, month, 1))
+        cleaned["valuation_month"] = valuation_month
+        if valuation_month > self.default_period:
+            self.add_error("month", "估值月份不得晚於最近已完成月份。")
+            return cleaned
+        if valuation_month < month_end(self.share_class.inception_date):
+            self.add_error("month", "估值月份不得早於股份類別成立月份。")
+            return cleaned
+        if self.share_class.nav_records.filter(
+            valuation_month=valuation_month, is_active=True
+        ).exists():
+            self.add_error("month", "該月份已有 NAV 紀錄，為避免重複不會覆蓋原有資料。")
+            return cleaned
+        if nav_value is None:
+            return cleaned
+        prior = (
+            self.share_class.nav_records.filter(
+                is_active=True,
+                valuation_month__lt=valuation_month,
+            )
+            .order_by("-valuation_month")
+            .first()
+        )
+        if prior:
+            change = nav_value / prior.nav_per_share - Decimal(1)
+            threshold = OrganizationSettings.load().nav_change_warning_threshold
+            if abs(change) > threshold and not cleaned.get("confirm_large_change"):
+                self.large_change_warning = (
+                    f"NAV 相對 {prior.valuation_month:%Y 年 %m 月} 變動 {change * 100:.2f}%。"
+                    "請檢查數值；如確認正確，再按一次儲存。"
+                )
+                raise forms.ValidationError(self.large_change_warning)
+        return cleaned
 
 
 class ManualRFRForm(forms.Form):

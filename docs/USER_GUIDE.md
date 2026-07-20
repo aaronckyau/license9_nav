@@ -4,19 +4,21 @@
 
 使用管理員提供的個人帳號登入。一般工作都在自訂頁面完成，不使用 Django Admin。
 
-1. **Select Fund**：Dashboard 選 fund/share class，或建立新 fund。
-2. **Fund Setup**：填 legal/display name、domicile、objective；建立一或多個 share classes/series；設定 strategy、parties、terms、contacts。
-3. **Enter NAV**：逐月輸入 valuation month/date 與 NAV per share，或 dry-run/confirm CSV/XLSX import。
-4. **Review Performance**：選 year/quarter/version，檢查 continuity warnings、quarterly table、NAV chart、metrics 與 RFR。
-5. **基金經理評論**：輸入標題、Markdown 評論、作者及日期；草稿階段可重複編輯。
-6. **Preview**：檢查所有報表 section、負百分比、小數精度、disclaimer 與 provenance。
-7. **Generate Report**：產生 DOCX/PDF；下載、核對後 finalization。資料需更正時建立新 version，不覆寫 FINAL。
+1. **選擇基金**：在首頁選擇基金及股份類別，按「選擇並開始輸入」。
+2. **輸入 NAV 及基金經理評論**：選年份與 1–12 月，輸入該月每股 NAV 及評論。系統日期顯示於頁面；預設月份為最近已完成月份，例如 2026-07-20 預設 2026 年 6 月。非季末月份儲存後返回首頁，季末月份前往產生報告。
+3. **產生報告**：在 3、6、9、12 月 NAV 齊全後按「產生報告」。系統會先驗證缺月，再自動取得官方 RFR、計算績效，並產生 Word 及 PDF；完成後可在同頁下載。
+
+基金建立後不需要在正常月結流程重複設定基金、選季度、輸入報告日期或另外開啟評論頁。系統會依月份自動判斷季度。報告所需季度月份尚未齊全時，系統會列出缺月並停止產生，不會補入假資料。
+
+## 進階功能
+
+頁首「進階」及每份報告的「進階檢查」保留基金／股份類別設定、NAV 歷史與批次匯入、績效檢視、人工 RFR、HTML 預覽、版本與定稿控制。只有首次建立基金、資料修正或專業覆核時才需要使用。
 
 ## NAV 驗證
 
 - Valuation month 會正規化為月末；NAV 必須大於零。
 - 同 share class/month 重複時表單顯示錯誤，不產生 500。
-- 缺月會在 Review Performance 列出並阻止權威生成/finalization。
+- 缺月會在產生或進階績效檢查時列出，並阻止權威生成／定稿。
 - 絕對月變動超過 organization threshold（預設 25%）顯示 abnormal warning；需勾選 acknowledgement 才可保存。
 - 修改既有 NAV 必須填理由；audit 保留 before/after/revision。受影響 FINAL 轉為 STALE，但原 snapshot/file 不變。
 

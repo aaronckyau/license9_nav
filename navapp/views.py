@@ -13,6 +13,7 @@ from django.db import IntegrityError, connections, transaction
 from django.db.models import Max, Prefetch
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_GET, require_POST
 
@@ -28,8 +29,10 @@ from navapp.forms import (
     PartyFormSet,
     ReportCreateForm,
     ShareClassForm,
+    SimpleEntryForm,
     StrategyFormSet,
     TermFormSet,
+    latest_completed_month,
 )
 from navapp.models import (
     AuditLog,
@@ -39,6 +42,7 @@ from navapp.models import (
     OrganizationSettings,
     QuarterlyReport,
     ShareClass,
+    month_end,
 )
 from navapp.services.calculations import CalculationValidationError, calculate_for_report
 from navapp.services.commentary import render_safe_html
@@ -224,6 +228,130 @@ def nav_history(request, pk):
         request,
         "navapp/nav_history.html",
         {"share_class": share_class, "records": records},
+    )
+
+
+def _portfolio_manager_name(share_class: ShareClass) -> str:
+    portfolio_manager = share_class.fund.parties.filter(party_type="PORTFOLIO_MANAGER").first()
+    return portfolio_manager.value if portfolio_manager else ""
+
+
+def _draft_report_for_period(
+    share_class: ShareClass, year: int, quarter: int, user
+) -> tuple[QuarterlyReport, bool]:
+    latest = (
+        QuarterlyReport.objects.filter(
+            share_class=share_class,
+            year=year,
+            quarter=quarter,
+        )
+        .order_by("-version")
+        .first()
+    )
+    if latest and latest.status not in {
+        QuarterlyReport.Status.FINAL,
+        QuarterlyReport.Status.STALE,
+    }:
+        return latest, False
+    version = latest.version + 1 if latest else 1
+    report = QuarterlyReport(
+        fund=share_class.fund,
+        share_class=share_class,
+        year=year,
+        quarter=quarter,
+        version=version,
+        report_date=month_end(date(year, quarter * 3, 1)),
+        commentary_author=_portfolio_manager_name(share_class),
+        created_by=user,
+    )
+    report.full_clean()
+    report.save()
+    return report, True
+
+
+@login_required
+def simple_entry(request, share_class_pk):
+    share_class = get_object_or_404(
+        ShareClass.objects.select_related("fund"),
+        pk=share_class_pk,
+        is_active=True,
+        fund__is_active=True,
+    )
+    form = SimpleEntryForm(request.POST or None, share_class=share_class)
+    if request.method == "POST" and form.is_valid():
+        valuation_month = form.cleaned_data["valuation_month"]
+        quarter = (valuation_month.month - 1) // 3 + 1
+        with transaction.atomic():
+            nav = NAVRecord(
+                share_class=share_class,
+                valuation_month=valuation_month,
+                valuation_date=valuation_month,
+                nav_per_share=form.cleaned_data["nav_per_share"],
+                status=NAVRecord.Status.OFFICIAL,
+                change_acknowledged=bool(form.cleaned_data.get("confirm_large_change")),
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            nav.full_clean()
+            nav.save()
+            report, created = _draft_report_for_period(
+                share_class,
+                valuation_month.year,
+                quarter,
+                request.user,
+            )
+            report.commentary_markdown = form.cleaned_data["commentary_markdown"]
+            report.commentary_date = valuation_month
+            report.status = QuarterlyReport.Status.DRAFT
+            report.snapshot = {}
+            report.generation_error = ""
+            report.save(
+                update_fields=[
+                    "commentary_markdown",
+                    "commentary_date",
+                    "status",
+                    "snapshot",
+                    "generation_error",
+                    "updated_at",
+                ]
+            )
+            AuditLog.objects.create(
+                actor=request.user,
+                entity_type="NAVRecord",
+                entity_id=str(nav.pk),
+                action="CREATE",
+                after_json=_nav_json(nav),
+            )
+            AuditLog.objects.create(
+                actor=request.user,
+                entity_type="QuarterlyReport",
+                entity_id=str(report.pk),
+                action="SIMPLE_ENTRY",
+                after_json={
+                    "created": created,
+                    "share_class_id": share_class.pk,
+                    "valuation_month": valuation_month.isoformat(),
+                    "nav_record_id": nav.pk,
+                    "report_period": f"{report.year} Q{report.quarter}",
+                },
+            )
+        if valuation_month.month not in {3, 6, 9, 12}:
+            messages.success(
+                request,
+                f"NAV 及基金經理評論已儲存；本季報告會在 {report.report_date.month} 月 NAV 齊全後產生。",
+            )
+            return redirect("dashboard")
+        messages.success(request, "NAV 及基金經理評論已儲存，現在可以產生報告。")
+        return redirect(f"{reverse('report-history')}?report={report.pk}")
+    return render(
+        request,
+        "navapp/simple_entry.html",
+        {
+            "form": form,
+            "share_class": share_class,
+            "system_date": form.system_date,
+            "default_period": form.default_period,
+        },
     )
 
 
@@ -561,11 +689,23 @@ def report_chart(request, pk):
 def report_generate(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     try:
+        calculate_for_report(report)
+        try:
+            rfr_snapshot = report.rfr_snapshot
+        except ObjectDoesNotExist:
+            rfr_snapshot = None
+        if rfr_snapshot is None or not rfr_snapshot.is_manual:
+            refresh_report_rfr(report)
         generate_report_files(report, request.user)
         messages.success(request, "Word 及 PDF 報告已產生。")
-    except (ReportGenerationError, CalculationValidationError) as exc:
+    except (
+        ReportGenerationError,
+        CalculationValidationError,
+        RFRProviderError,
+        RFRValidationError,
+    ) as exc:
         messages.error(request, f"產生報告失敗：{exc}")
-    return redirect("report-review", pk=pk)
+    return redirect(f"{reverse('report-history')}?report={report.pk}")
 
 
 @login_required
@@ -582,10 +722,27 @@ def report_finalize(request, pk):
 
 @login_required
 def report_history(request):
-    reports = QuarterlyReport.objects.select_related("fund", "share_class").prefetch_related(
-        "files"
+    reports = list(
+        QuarterlyReport.objects.select_related("fund", "share_class").prefetch_related("files")
     )
-    return render(request, "navapp/report_history.html", {"reports": reports})
+    completed_month = latest_completed_month()
+    for item in reports:
+        item.simple_period_complete = item.report_date <= completed_month
+    selected_report = request.GET.get("report", "")
+    active_report = (
+        next((item for item in reports if item.pk == int(selected_report)), None)
+        if selected_report.isdigit()
+        else None
+    )
+    return render(
+        request,
+        "navapp/report_history.html",
+        {
+            "reports": reports,
+            "selected_report": selected_report,
+            "report": active_report,
+        },
+    )
 
 
 @login_required

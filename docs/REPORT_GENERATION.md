@@ -2,18 +2,20 @@
 
 ## 流程
 
-1. 從 fund/share class/NAV/RFR/commentary/resolved organization settings 建立 JSON snapshot。
-2. 重新計算 `legacy_excel_v1`，拒絕 duplicate、missing month、quarter gap、invalid RFR 等問題。
-3. 用 Matplotlib 產生內嵌 PNG NAV chart。
-4. 使用內建 python-docx generator，或已驗證 required placeholders 的 custom DOCX template。
-5. 稽核 ZIP/package integrity、relationships、embedded media、table geometry、footer、metadata；拒絕 external Excel relationship。
-6. 先登記 DOCX 與 SHA-256，再以隔離 LibreOffice profile headless 轉 PDF，登記 PDF/hash。
-7. 只有 DOCX、PDF、snapshot 與所有 finalization checks 通過時才可 FINAL。
+1. 三步流程的「產生報告」會先更新官方 RFR；已有具理由的 manual override 時保留人工值。
+2. 從 fund/share class/NAV/RFR/commentary/resolved organization settings 建立 JSON snapshot。
+3. 重新計算 `legacy_excel_v1`，拒絕 duplicate、missing month、quarter gap、invalid RFR 等問題。
+4. 用 Matplotlib 產生內嵌 PNG NAV chart。
+5. 使用內建 python-docx generator，或已驗證 required placeholders 的 custom DOCX template。
+6. 稽核 ZIP/package integrity、relationships、embedded media、table geometry、footer、metadata；拒絕 external Excel relationship。
+7. 先登記 DOCX 與 SHA-256，再以隔離 LibreOffice profile headless 轉 PDF，登記 PDF/hash。
+8. 只有 DOCX、PDF、snapshot 與所有 finalization checks 通過時才可 FINAL。
 
 PDF 失敗時保留可下載/診斷 DOCX，report 狀態為 `GENERATION_FAILED`，不會假裝完整成功。
 
 ## 版面規則
 
+- 使用者提供的 XSQ 2026 Q1 newsletter 是內建報告的章節與視覺依據；順序為 objective、strategy、quarterly returns、NAV graph、statistics、manager commentary、general information、contacts、disclaimer。
 - A4、Arial（Linux 映射 Liberation Sans）、固定 page margins、流動 paragraphs。
 - Chart 為 embedded PNG；不得有 external Excel/chart workbook link。
 - 表格寬度明確、header repeat、無 fixed row height，避免文字/負百分比截斷。

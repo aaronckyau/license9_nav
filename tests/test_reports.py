@@ -111,9 +111,25 @@ def test_docx_package_contains_sections_table_values_chart_and_no_excel_links(re
     document = Document(output)
     text = "\n".join(paragraph.text for paragraph in document.paragraphs)
     assert "Investment Objective" in text
+    assert "Fund Performance (Net Quarterly Returns)" in text
+    assert "Fund Performance (Graph)" in text
     assert "Manager Commentary" in text
     assert "Fund-specific legal disclaimer" in text
     assert "Professional investors only - fund override" in text
+    section_positions = [
+        text.index(label)
+        for label in (
+            "Investment Objective",
+            "Strategy Highlights and Characteristics",
+            "Fund Performance (Net Quarterly Returns)",
+            "Fund Performance (Graph)",
+            "Manager Commentary",
+            "General Information",
+            "Contacts",
+            "Disclaimer",
+        )
+    ]
+    assert section_positions == sorted(section_positions)
     assert snapshot["calculation"]["quarterly_matrix"]["2024"]["q1"]["display"] == "5.00%"
     assert any(
         "5.00%" in cell.text

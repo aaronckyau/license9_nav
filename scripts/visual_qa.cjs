@@ -24,6 +24,7 @@ const pages = [
   ["fund-setup", "/funds/1/edit/"],
   ["nav-history", "/classes/1/nav/"],
   ["nav-entry", "/classes/1/nav/new/"],
+  ["simple-entry", "/classes/1/entry/"],
   ["report-review", "/reports/1/review/"],
   ["manager-commentary", "/reports/1/commentary/"],
   ["report-preview", "/reports/1/preview/"],

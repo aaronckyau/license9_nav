@@ -84,6 +84,7 @@ def choice_label(value):
         "FINALIZE": "定稿",
         "BULK_NAV_IMPORT": "批次匯入 NAV",
         "MANUAL_RFR_OVERRIDE": "手動覆寫無風險利率",
+        "SIMPLE_ENTRY": "三步流程輸入",
         "MARK_REPORTS_STALE": "標示報告需重新產生",
         "NAV Quarterly Reporting": "NAV 季度報告系統",
     }
@@ -106,6 +107,7 @@ def zh_text(value):
         "(annualized return - annual RFR) / annualized volatility since inception": "（年化回報 − 年化無風險利率）÷ 成立以來年化波動率",
         "Intentional correction from the workbook fixed-cell result.": "此結果已刻意修正工作簿固定儲存格算法。",
         "Legacy workbook method; this is not a monthly excess-return Sharpe ratio.": "沿用舊版工作簿算法；此數值並非按月超額回報計算的夏普比率。",
+        "LibreOffice executable 'soffice' was not found.": "找不到 LibreOffice 執行檔 'soffice'。",
         "RFR snapshot is required.": "必須建立無風險利率快照。",
         "Exactly 12 RFR observations are required.": "必須有正好 12 筆無風險利率觀察值。",
         "Generated DOCX and PDF files are required.": "必須先產生 DOCX 及 PDF 檔案。",

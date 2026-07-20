@@ -570,10 +570,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     subtitle = document.add_paragraph()
     subtitle.paragraph_format.space_after = Pt(4)
     subtitle.paragraph_format.keep_with_next = True
-    run = subtitle.add_run(
-        f"{identity['year']} Q{identity['quarter']} Quarterly Newsletter"
-        + (f" | {identity['share_class_name']}" if identity["share_class_name"] else "")
-    )
+    run = subtitle.add_run(f"{identity['year']} Q{identity['quarter']}")
     _set_run_font(run, size=15, bold=True, color=RGBColor(55, 70, 85))
     for line in (fund["professional_statement"], fund["date_statement"]):
         paragraph = document.add_paragraph()
@@ -597,7 +594,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for strategy in fund["strategies"]:
         document.add_paragraph(str(strategy), style="List Bullet")
 
-    document.add_heading("Fund Performance - Net Quarterly Returns", level=1)
+    document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
     matrix = snapshot["calculation"]["quarterly_matrix"]
     performance = document.add_table(rows=1, cols=6)
     performance.style = "Table Grid"
@@ -623,7 +620,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
             run.font.color.rgb = RGBColor(105, 110, 115)
             run.font.size = Pt(9)
 
-    document.add_heading("NAV per Share", level=1)
+    document.add_heading("Fund Performance (Graph)", level=1)
     document.add_picture(str(chart_path), width=Inches(6.55))
     document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 

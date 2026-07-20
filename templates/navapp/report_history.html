@@ -1,3 +1,41 @@
 {% extends "base.html" %}
 {% load nav_tags %}
-{% block content %}<div class="page-heading"><div><p class="eyebrow">版本控制</p><h1>報告歷史紀錄</h1></div><a class="button primary" href="{% url 'report-create' %}">建立報告</a></div><section class="panel table-wrap"><table class="report-history-table mobile-cards"><thead><tr><th>基金／類別</th><th>期間</th><th>版本</th><th>狀態</th><th class="mobile-hide">建立時間</th><th>檔案</th><th>操作</th></tr></thead><tbody>{% for report in reports %}<tr><td data-label="基金／類別">{{ report.share_class }}</td><td data-label="期間">{{ report.year }} 年第 {{ report.quarter }} 季</td><td data-label="版本">{{ report.version }}</td><td data-label="狀態"><span class="status {{ report.status|lower }}">{{ report.status|choice_label }}</span></td><td class="mobile-hide" data-label="建立時間">{{ report.created_at|date:"Y 年 n 月 j 日 H:i" }}</td><td data-label="檔案">{% for file in report.files.all %}<a href="{% url 'report-download' report.pk file.file_type %}">{{ file.file_type }}</a> {% empty %}—{% endfor %}</td><td data-label="操作"><a href="{% url 'report-review' report.pk %}">檢視</a></td></tr>{% empty %}<tr><td colspan="7">尚無報告。</td></tr>{% endfor %}</tbody></table></section>{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">步驟 2</p>
+    <h1>產生報告</h1>
+    <p class="muted">系統會自動取得無風險利率、計算績效，並產生 Word 及 PDF。</p>
+  </div>
+  <details class="advanced-page-actions"><summary>其他操作</summary><a href="{% url 'report-create' %}">建立空白報告</a></details>
+</div>
+
+<section class="panel table-wrap">
+  <table class="report-history-table mobile-cards">
+    <thead><tr><th>基金／類別</th><th>期間</th><th>狀態</th><th>報告檔案</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for report in reports %}
+      <tr id="report-{{ report.pk }}"{% if report.pk|stringformat:"s" == selected_report %} class="selected-report"{% endif %}>
+        <td data-label="基金／類別"><strong>{{ report.share_class }}</strong><br><span class="muted">版本 {{ report.version }}</span></td>
+        <td data-label="期間">{{ report.year }} 年第 {{ report.quarter }} 季</td>
+        <td data-label="狀態"><span class="status {{ report.status|lower }}">{{ report.status|choice_label }}</span>{% if report.generation_error %}<p class="error-text">{{ report.generation_error|zh_text }}</p>{% endif %}</td>
+        <td data-label="報告檔案">
+          <div class="file-actions">{% if report.status == "READY" or report.status == "FINAL" or report.status == "STALE" %}{% for file in report.files.all %}<a class="button secondary" href="{% url 'report-download' report.pk file.file_type %}">下載 {{ file.file_type|choice_label }}</a>{% empty %}<span class="muted">尚未產生</span>{% endfor %}{% else %}<span class="muted">尚未產生</span>{% endif %}</div>
+        </td>
+        <td data-label="操作">
+          <div class="report-actions">
+            {% if report.status != "FINAL" and report.status != "STALE" %}
+              {% if report.simple_period_complete %}<form method="post" action="{% url 'report-generate' report.pk %}">{% csrf_token %}<button class="button primary" type="submit">{% if report.status == "READY" %}重新產生報告{% else %}產生報告{% endif %}</button></form>{% else %}<span class="muted">等待本季結束</span>{% endif %}
+            {% endif %}
+            <a href="{% url 'simple-entry' report.share_class_id %}">輸入另一月份</a>
+            <details class="inline-advanced"><summary>進階</summary><div><a href="{% url 'nav-history' report.share_class_id %}">修正現有 NAV</a><a href="{% url 'report-review' report.pk %}">報告檢查</a></div></details>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5"><div class="empty-state"><h2>尚無可產生的報告</h2><p>請先選擇基金並輸入 NAV 及基金經理評論。</p><a class="button primary" href="{% url 'dashboard' %}">選擇基金</a></div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
