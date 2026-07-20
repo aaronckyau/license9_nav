@@ -43,4 +43,4 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - 權威顯示計算使用 `Decimal`；NAV 顯示 6 位小數，百分比顯示正負號及 2 位小數。上一年度 12 月基準缺少時會使用當年首筆 NAV 並明確提示，首筆回報維持「—」。
 - 圖表由 authenticated、`private, no-store` 的 PNG endpoint 即時提供；桌面及手機分別使用橫向／直向版面，不依賴前端 JavaScript 或公共 CDN。
 - 響應式版面已於 1440×1000、1024×900、390×844、360×800 實際檢查：無水平溢位，390px 顯示 2 欄摘要，360px 顯示 1 欄摘要，月資料轉為可讀卡片，編輯目標至少 44px。
-- 本次變更僅在本機完成及驗證，尚未推送 GitHub 或部署 production。
+- 年度 NAV 儀表板功能 commits `75d32fb`、`ef04eef` 已推送至 GitHub `main` 並部署至 production。VPS image build、migration、三個容器 healthcheck、Django deployment check、LibreOffice DOCX/PDF smoke、公開 health/readiness、未登入保護及一次性帳號 authenticated smoke 均通過；一次性帳號已刪除，未修改 NAV 資料。

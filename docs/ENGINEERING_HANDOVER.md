@@ -72,6 +72,6 @@ DB/media 必須同一 timestamp 並做 off-site encrypted copy；還原後核對
 ## Production 狀態
 
 - GitHub：`https://github.com/aaronckyau/license9_nav`，branch `main`。
-- VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；三步流程、按年份 NAV／報告頁評論 UX，以及最新月份仍可查看／編輯的修正已於 2026-07-20 完成部署，最新功能 commit 為 `f35ae2b`。
+- VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；三步流程、年度 NAV 摘要／折線圖／回報表、響應式月份卡片、報告頁評論 UX，以及既有 NAV 查看／編輯均已於 2026-07-20 完成部署，最新功能 commit 為 `ef04eef`。
 - Nginx 設定更新前備份：`/etc/nginx/sites-available/4mstrategy.com.bak.20260720T020446Z.nav-deploy`。
 - 後續操作重點是首次登入更改管理員密碼、安排加密 off-site backup 及定期 restore drill；不需再改 MVP 架構。

@@ -94,3 +94,13 @@ Playwright 使用 bundled Node、`NODE_PATH` 與 Edge executable，`QA_BASE_URL=
 - 360×800：摘要 1 欄，月份卡片及 44px 編輯目標完整，無水平溢位。
 - 另以超長基金／股份類別名稱做臨時本機資料 QA，360px 可自然換行且無水平溢位；驗證後依正確關聯順序刪除臨時資料，未修改正式 XSQ NAV。
 - 視覺證據位於 `artifacts/visual-qa-zh/nav-dashboard-*.png`。
+
+## 年度 NAV 儀表板 production 部署驗證（2026-07-20）
+
+- GitHub `main` 及 VPS runtime source 均部署功能 SHA `ef04eef`；部署前 DB/media backup timestamp 為 `20260720T081838Z`。
+- `docker compose --env-file .env config --quiet`、web image build、entrypoint migration／collectstatic、三個容器 healthcheck 及 `manage.py migrate --check` 通過。
+- `manage.py check --deploy` exit 0；只保留文件已記錄的 HSTS `includeSubDomains`／`preload` W005、W021 警告。
+- Production LibreOffice smoke 通過，產生 XSQ 2026 Q1 DOCX/PDF；legacy import 為 `created=0 skipped=45`，沒有重複 NAV。
+- 公開 `https://www.4mstrategy.com/nav/healthz`、`readyz` 回傳 200；登入頁回傳 200；未登入年度頁及圖表均正確 302 至 `/nav/accounts/login/`。
+- 一次性帳號經公開 HTTPS 登入後，年度頁回傳 200，顯示 5 個年度卡、5 個月度表、5 張圖表與 48 個編輯入口；2025 圖表回傳 200 `image/png`。QA 帳號查詢結果為 0。
+- 啟動後日誌無 traceback 或持續 5xx；容器切換瞬間曾有一次內部 Nginx health probe 502，下一次 probe 即恢復 200，公開驗證全程正常。
