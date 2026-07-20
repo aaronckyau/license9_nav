@@ -17,8 +17,8 @@ docker compose up -d db
 docker compose run --rm web python manage.py migrate --noinput
 docker compose up -d
 docker compose ps
-curl --fail http://127.0.0.1:8000/healthz
-curl --fail http://127.0.0.1:8000/readyz
+curl --fail -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/healthz
+curl --fail -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/readyz
 docker compose exec web python manage.py check --deploy
 docker compose exec web python manage.py bootstrap_admin
 docker compose exec web /app/scripts/smoke_report.sh
@@ -46,7 +46,20 @@ docker compose exec web /app/scripts/smoke_report.sh
 
 ## Reverse proxy
 
-外層 Caddy/Nginx 終止 TLS，再代理至 `127.0.0.1:8000`，必須傳遞 `Host`、`X-Forwarded-For`、`X-Forwarded-Proto=https`。公司內部系統建議另以 VPN、identity-aware proxy 或 IP allow-list 限制來源。
+外層 Caddy/Nginx 終止 TLS，再代理至 loopback port，必須傳遞 `Host`、`X-Forwarded-For`、`X-Forwarded-Proto=https`。Path-prefix 部署必須讓 trailing-slash `proxy_pass` 移除公開 prefix：
+
+```nginx
+location = /nav { return 301 /nav/; }
+location ^~ /nav/ {
+    proxy_pass http://127.0.0.1:5430/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Prefix /nav;
+}
+```
+
+此模式同時要求 `.env` 設定 `FORCE_SCRIPT_NAME=/nav`、專屬 cookie names、`HTTP_PORT=5430`。公司內部系統建議另以 VPN、identity-aware proxy 或 IP allow-list 限制來源。
 
 ## 升級
 
@@ -57,7 +70,7 @@ git pull --ff-only
 docker compose build --pull web
 docker compose up -d
 docker compose ps
-curl --fail http://127.0.0.1:8000/readyz
+curl --fail -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/readyz
 docker compose exec web python manage.py check --deploy
 docker compose exec web /app/scripts/smoke_report.sh
 ```
@@ -66,4 +79,4 @@ docker compose exec web /app/scripts/smoke_report.sh
 
 ## 靜態驗證結果
 
-`docker compose --env-file .env.example config --quiet` 通過。Dockerfile 使用 Python 3.12 slim、non-root UID 10001、LibreOffice/fonts/Poppler、writable named volumes；`.dockerignore` 採白名單防止 `.env`、SQLite、artifacts、backups、`.venv` 進 build context。DB 有 `pg_isready`、web `/readyz`、Nginx `/healthz` health checks，DB 位於 internal network，Nginx 等待 web ready。
+`docker compose --env-file .env.example config --quiet` 通過。Dockerfile 使用 Python 3.12 slim、non-root UID 10001、LibreOffice/fonts/Poppler、writable named volumes；`.dockerignore` 採白名單防止 `.env`、SQLite、artifacts、backups、`.venv` 進 build context。DB 有 `pg_isready`、web `/readyz`、Nginx `/healthz` health checks（HTTPS-aware forwarding header），DB 位於 internal network，Nginx 等待 web ready。2026-07-20 已在 Contabo Ubuntu 實際完成 image build、三服務健康檢查、migration、LibreOffice DOCX/PDF smoke 與 `/nav` 公開驗證。

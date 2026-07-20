@@ -35,6 +35,8 @@ docker compose exec web python manage.py bootstrap_admin
 
 ## Docker Compose / VPS
 
+目前 production 已部署於 `https://www.4mstrategy.com/nav/`，VPS checkout 為 `/root/apps/license9_nav`，Compose 對 host 只綁定 `127.0.0.1:5430`。以下仍保留可攜式首次部署流程；正式環境細節見 `docs/ENGINEERING_HANDOVER.md`。
+
 ```bash
 cp .env.example .env
 # 填入真實 secret、密碼、host、HTTPS origin 與安全設定
@@ -44,7 +46,7 @@ docker compose up -d db
 docker compose run --rm web python manage.py migrate --noinput
 docker compose up -d
 docker compose ps
-curl --fail http://127.0.0.1:8000/readyz
+curl --fail -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/readyz
 docker compose exec web python manage.py check --deploy
 docker compose exec web /app/scripts/smoke_report.sh
 ```

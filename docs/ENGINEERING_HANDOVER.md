@@ -2,7 +2,7 @@
 
 ## 交付摘要
 
-MVP 已完成並通過本機可執行的 application、calculation、import、RFR、report、security、browser 與 artifact checks。主流程是自訂頁面 `Select Fund → Fund Setup → Enter NAV → Review Performance → Manager Commentary → Preview → Generate Report`；Admin 只作 trusted correction。
+MVP 已完成、推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機 application/calculation/import/RFR/browser/artifact checks 及 VPS production Docker/LibreOffice/public smoke。主流程是自訂頁面 `Select Fund → Fund Setup → Enter NAV → Review Performance → Manager Commentary → Preview → Generate Report`；Admin 只作 trusted correction。
 
 ## Runtime 與入口
 
@@ -10,11 +10,12 @@ MVP 已完成並通過本機可執行的 application、calculation、import、RF
 - 本機：`.\.venv\Scripts\python.exe manage.py runserver`。
 - Health：`/healthz`；readiness（含 DB）：`/readyz`。
 - 登入：`/accounts/login/`；Admin：`/admin/`。
+- Production 公開 prefix：`/nav`；VPS loopback：`127.0.0.1:5430`。
 - Normal workflow routes 由 `navapp/urls.py` 定義。
 
 ## 首次資料與登入
 
-專案沒有預設密碼。互動 bootstrap：`python manage.py createsuperuser`。自動 bootstrap：設定 `DJANGO_SUPERUSER_USERNAME`、`DJANGO_SUPERUSER_EMAIL`、`DJANGO_SUPERUSER_PASSWORD` 後執行 `python manage.py bootstrap_admin`；既有帳號不改密碼。
+通用部署沒有硬編碼預設密碼。互動 bootstrap：`python manage.py createsuperuser`。自動 bootstrap：設定 `DJANGO_SUPERUSER_USERNAME`、`DJANGO_SUPERUSER_EMAIL`、`DJANGO_SUPERUSER_PASSWORD` 後執行 `python manage.py bootstrap_admin`；既有帳號不改密碼。現有 VPS username 是 `admin`，初始密碼只存於 root-only `/root/.license9_nav_admin_password`，首次登入後必須更改。
 
 XSQ demo：
 
@@ -26,22 +27,21 @@ python manage.py generate_sample_report
 ## VPS 精確命令
 
 ```bash
-cd /opt/monthly_nav
-cp .env.example .env
-chmod 600 .env
+cd /root/apps/license9_nav
+git pull --ff-only origin main
 docker compose --env-file .env config --quiet
-docker compose build --pull web
-docker compose up -d db
-docker compose run --rm web python manage.py migrate --noinput
-docker compose up -d
-docker compose ps
-curl --fail http://127.0.0.1:8000/readyz
-docker compose exec web python manage.py check --deploy
-docker compose exec web python manage.py bootstrap_admin
-docker compose exec web /app/scripts/smoke_report.sh
+docker compose --env-file .env build --pull web
+docker compose --env-file .env up -d
+docker compose --env-file .env ps
+curl --fail -H 'Host: www.4mstrategy.com' -H 'X-Forwarded-Proto: https' http://127.0.0.1:5430/readyz
+docker compose --env-file .env exec -T web python manage.py check --deploy
+docker compose --env-file .env exec -T web python manage.py seed_demo
+docker compose --env-file .env exec -T web /app/scripts/smoke_report.sh
+curl --fail https://www.4mstrategy.com/nav/healthz
+curl --fail https://www.4mstrategy.com/nav/readyz
 ```
 
-必要 `.env`：`DJANGO_SECRET_KEY`、`ALLOWED_HOSTS`、`CSRF_TRUSTED_ORIGINS`、`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`；HTTPS production 另必須正確設定 secure cookies、SSL redirect、HSTS。完整表見 `DEPLOYMENT_VPS.md`。
+必要 `.env`：`DJANGO_SECRET_KEY`、`ALLOWED_HOSTS`、`CSRF_TRUSTED_ORIGINS`、`FORCE_SCRIPT_NAME=/nav`、`SESSION_COOKIE_NAME=nav_sessionid`、`CSRF_COOKIE_NAME=nav_csrftoken`、PostgreSQL 三項、`BIND_ADDRESS=127.0.0.1`、`HTTP_PORT=5430`；HTTPS production 另必須設定 secure cookies、SSL redirect、HSTS。完整表見 `DEPLOYMENT_VPS.md`。
 
 ## Backup/restore
 
@@ -67,8 +67,11 @@ DB/media 必須同一 timestamp 並做 off-site encrypted copy；還原後核對
 
 ## 驗證與 artifacts
 
-全套結果：32 passed、1 local-LibreOffice skip；Ruff/Django/migrations/deploy check/Compose config PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；36 張 UI screenshots/contact sheets/JSON 在 `artifacts/visual-qa/`。
+全套結果：33 passed、1 local-LibreOffice skip；Ruff/Django/migrations/deploy check/Compose config PASS；VPS image build、三個 healthy containers、LibreOffice report smoke、公開 login/logout PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；36 張 UI screenshots/contact sheets/JSON 在 `artifacts/visual-qa/`。
 
-## 下一個環境步驟
+## Production 狀態
 
-把目錄納入正式 Git repository，讓 `.github/workflows/ci.yml` 在 Ubuntu 跑完 LibreOffice report smoke；之後在 staging VPS 執行上述 Compose 命令、TLS/proxy、restore drill 與登入下載驗證。這是環境交付，不需再改 MVP 架構。
+- GitHub：`https://github.com/aaronckyau/license9_nav`，branch `main`。
+- VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；部署 commit 以 `git rev-parse HEAD` 核對。
+- Nginx 設定更新前備份：`/etc/nginx/sites-available/4mstrategy.com.bak.20260720T020446Z.nav-deploy`。
+- 後續操作重點是首次登入更改管理員密碼、安排加密 off-site backup 及定期 restore drill；不需再改 MVP 架構。
