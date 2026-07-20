@@ -51,6 +51,8 @@ Public /nav login/logout/static/health/readiness PASS
 
 2026-07-20 最新 UX 增量另以 in-app Edge 驗證按年份 NAV 頁及報告評論卡：1440×1000、1024×900、390×844 均無水平溢出。實際瀏覽器操作成功新增 2025 年 4 月 NAV `151.250000` 並開放 5 月，也成功在指定 report/version 儲存評論後進入產生流程。8 張有效截圖位於 `artifacts/visual-qa-zh/workflow-v2-*.png`。
 
+功能 commit `0cde04b` 部署後，再由公開 HTTPS 入口以一次性 QA 帳號驗證登入、基金首頁、`/nav/classes/1/entry/` 與 `/nav/reports/`；頁面均顯示新版繁體中文工作流，一次性帳號隨即刪除，未寫入基金、NAV 或報告資料。
+
 ## XSQ report QA
 
 - `artifacts/sample-reports/XSQ_2026_Q1_Quarterly_Report.docx`：169009 bytes，SHA-256 `a0197b2eec664ecfeaa15f8c2aa12f9019f219c22d9567307f6f3929d8c36941`。

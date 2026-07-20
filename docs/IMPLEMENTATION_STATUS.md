@@ -26,7 +26,7 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - 產生報告時自動更新官方 RFR；已有具理由的人工 RFR 時不覆寫。產生完成後返回報告紀錄並直接提供下載。
 - 中文版 1440×1000、1024×900、390×844 共 30 頁面／viewport inspections，無水平溢出、殘留的核心英文操作標籤或舊術語「管理員評論」。
 
-本次按年份 NAV／報告頁評論 UX 變更已完成本機驗證，但尚未 commit、push 或部署；production 仍是上一個已部署版本。
+本次按年份 NAV／報告頁評論 UX 已以 commit `0cde04b` 推送至 GitHub `main` 並部署至 production。部署後重新通過 migration check、三個容器 healthcheck、公開 health/readiness，以及一次性 QA 帳號的登入、基金首頁、NAV 輸入頁與報告評論頁檢查；QA 帳號已於檢查後刪除。
 
 ## 外部驗證限制
 
