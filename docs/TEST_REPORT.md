@@ -15,7 +15,8 @@ pytest -q                                         PASS: 37 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
-Public /nav login/logout/static/health/readiness  PASS
+Public /nav authenticated three-step workflow    PASS
+Public /nav login/logout/static/health/readiness PASS
 ```
 
 唯一 skip：`tests/test_reports.py::test_real_libreoffice_pdf_conversion`，原因是本 Windows 主機沒有 `soffice`。VPS 的 production image 已另以相同 report pipeline 及真實 LibreOffice smoke 通過。
@@ -56,7 +57,7 @@ Public /nav login/logout/static/health/readiness  PASS
 - `artifacts/report-render/XSQ_2026_Q1_page-1.png` 至 `page-4.png`：依使用者提供的 2026 Q1 DOCX 章節結構逐頁檢查通過；負百分比、三位 Sharpe precision、表格、內嵌圖表、評論、免責聲明及頁尾均正常。
 - 18 段 long-commentary fixture：6 頁 A4；評論自然跨頁，署名不孤立，information/disclaimer 新頁、footer 一致。
 - VPS production artifact：`/app/media/reports/1/v1/quarterly-report.docx` 與 `.pdf`；DOCX ZIP 完整、2 embedded media、0 external relationship；LibreOffice PDF 為 4 頁 A4、PDF 1.6。
-- 公開 smoke：`/nav`→`/nav/`、未登入 workflow→`/nav/accounts/login/`、login/logout、CSS、`healthz`、`readyz` 全部通過；已停用四個舊入口回傳 404。
+- 公開 smoke：`/nav`→`/nav/`、未登入 workflow→`/nav/accounts/login/`、login/logout、CSS、`healthz`、`readyz` 全部通過；一次性 QA 帳號驗證首頁三步、輸入頁 2026 年 6 月預設值及產生報告頁後已刪除；已停用四個舊入口回傳 404。
 
 ## 實際命令
 

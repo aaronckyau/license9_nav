@@ -6,7 +6,7 @@
 
 MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/`。Production PostgreSQL、Gunicorn、Nginx、LibreOffice、登入及報表 smoke 均已實際驗證。
 
-2026-07-20 的最新本地版本已把一般月結收斂為三步流程，並以使用者提供的 XSQ 2026 Q1 DOCX 作為新版報告設計依據。本次變更完成本機測試與視覺 QA；在取得明確 push／deploy 授權前，production 仍維持上一個已驗證版本。
+2026-07-20 的三步月結版本已推送 GitHub 並部署至 production，使用者提供的 XSQ 2026 Q1 DOCX 作為新版報告設計依據。部署後已通過 Docker build、migration、LibreOffice DOCX/PDF smoke、公開 health/readiness 及 authenticated HTTPS 三步流程檢查。
 
 ## 已完成
 
