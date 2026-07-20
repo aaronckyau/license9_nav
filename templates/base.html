@@ -33,20 +33,20 @@
   {% if user.is_authenticated and report %}
     <nav class="workflow" aria-label="報告工作流程">
       <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
-      <a href="{% url 'simple-entry' report.share_class_id %}"><b>1</b>輸入 NAV 及基金經理評論</a>
-      <a href="{% url 'report-history' %}?report={{ report.pk }}"><b>2</b>產生報告</a>
+      <a href="{% url 'simple-entry' report.share_class_id %}"><b>1</b>輸入每股 NAV</a>
+      <a href="{% url 'report-history' %}?report={{ report.pk }}"><b>2</b>評論及產生報告</a>
     </nav>
   {% elif user.is_authenticated and share_class %}
     <nav class="workflow" aria-label="報告工作流程">
       <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
-      <a href="{% url 'simple-entry' share_class.pk %}"><b>1</b>輸入 NAV 及基金經理評論</a>
-      <a href="{% url 'report-history' %}"><b>2</b>產生報告</a>
+      <a href="{% url 'simple-entry' share_class.pk %}"><b>1</b>輸入每股 NAV</a>
+      <a href="{% url 'report-history' %}"><b>2</b>評論及產生報告</a>
     </nav>
   {% elif user.is_authenticated %}
     <nav class="workflow" aria-label="應用程式工作流程">
       <a href="{% url 'dashboard' %}"><b>0</b>選擇基金</a>
-      <a href="{% url 'dashboard' %}"><b>1</b>輸入 NAV 及基金經理評論</a>
-      <a href="{% url 'report-history' %}"><b>2</b>產生報告</a>
+      <a href="{% url 'dashboard' %}"><b>1</b>輸入每股 NAV</a>
+      <a href="{% url 'report-history' %}"><b>2</b>評論及產生報告</a>
     </nav>
   {% endif %}
   <main id="main-content" class="page-shell">

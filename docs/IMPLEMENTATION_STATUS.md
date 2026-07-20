@@ -17,13 +17,16 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - Commentary/preview/versioning、DOCX/PDF、hash、外部 relationship audit、final immutability/staleness/audit。
 - XSQ 45 筆 legacy workbook 匯入及 2026 Q1 真實樣本報表。
 - Dockerfile、Compose、Nginx、entrypoint、health checks、backup/restore、CI 與完整文件。
-- 38 passed、1 個因本機無 LibreOffice 而 skip；最新三視窗 39 張 screenshots／33 次 inspections／0 failures。
+- 40 passed、1 個因本機無 LibreOffice 而 skip；最新 NAV／報告評論介面另完成 1440、1024、390 三視窗與實際提交驗證，無水平溢出。
 - GitHub `main`、VPS `/root/apps/license9_nav`、subpath `/nav` 與 loopback port `5430` 已部署。
 - VPS Docker image build、三個 healthy containers、migration、`check --deploy`、LibreOffice DOCX/PDF smoke 與 public login/logout 已通過。
 - 一般使用者網站已完整繁體中文化，包括登入、導覽、三步工作流程、表單、狀態、驗證訊息、績效檢視、RFR、評論、預覽、報告歷史及稽核頁；專有名詞及基金資料保留原文。
-- 三步頁面依系統日期預設最近已完成月份（2026-07-20 預設 2026 年 6 月），阻止重複 NAV，並保留異常變動的第二次確認。
+- NAV 頁按年份列出既有月份，只開放最早缺少的月份輸入，儲存後立即前進下一個月份；阻止跳月／重複 NAV，並保留異常變動的第二次確認。
+- 基金經理評論已移到「評論及產生報告」頁，每個 report/version 使用自己的評論欄，一次提交便儲存評論並產生報告。
 - 產生報告時自動更新官方 RFR；已有具理由的人工 RFR 時不覆寫。產生完成後返回報告紀錄並直接提供下載。
 - 中文版 1440×1000、1024×900、390×844 共 30 頁面／viewport inspections，無水平溢出、殘留的核心英文操作標籤或舊術語「管理員評論」。
+
+本次按年份 NAV／報告頁評論 UX 變更已完成本機驗證，但尚未 commit、push 或部署；production 仍是上一個已部署版本。
 
 ## 外部驗證限制
 

@@ -2,7 +2,7 @@
 {% load nav_tags %}
 {% block content %}
 <div class="page-heading">
-  <div><p class="eyebrow">步驟 0</p><h1>選擇基金</h1><p class="muted">選擇基金後，只需輸入月份、NAV 及基金經理評論。</p></div>
+  <div><p class="eyebrow">步驟 0</p><h1>選擇基金</h1><p class="muted">選擇基金後，先補上下一個月份的每股 NAV，再到報告頁輸入該季度評論。</p></div>
   <div class="actions"><a class="button ghost" href="{% url 'fund-list' %}">基金設定</a></div>
 </div>
 <section class="panel">
@@ -14,7 +14,7 @@
       <h2>{{ card.share_class.fund.display_name }}</h2>
       <p class="muted">{{ card.share_class.name }} · {{ card.share_class.currency }} · {{ card.share_class.return_basis|choice_label }}</p>
       <dl class="metric-pair"><div><dt>最新 NAV 月份</dt><dd>{{ card.latest_nav.valuation_month|date:"Y 年 n 月"|default:"—" }}</dd></div><div><dt>每股 NAV</dt><dd>{{ card.latest_nav.nav_per_share|nav_display:6 }}</dd></div></dl>
-      <div class="card-actions"><a class="button primary" href="{% url 'simple-entry' card.share_class.pk %}">選擇並開始輸入</a><a href="{% url 'nav-history' card.share_class.pk %}">NAV 歷史紀錄</a>{% if card.latest_report %}<a href="{% url 'report-history' %}?report={{ card.latest_report.pk }}">查看報告</a>{% endif %}</div>
+      <div class="card-actions"><a class="button primary" href="{% url 'simple-entry' card.share_class.pk %}">輸入每股 NAV</a><a href="{% url 'nav-history' card.share_class.pk %}">NAV 歷史紀錄</a>{% if card.latest_report %}<a href="{% url 'report-history' %}?report={{ card.latest_report.pk }}">評論及產生報告</a>{% endif %}</div>
     </article>
     {% endfor %}
   </div>

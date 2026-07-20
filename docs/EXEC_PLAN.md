@@ -20,7 +20,7 @@
 - [x] 完成 Docker/Nginx/health/volume/startup/backup/restore 靜態驗證及 Ubuntu CI。
 - [x] 完成 1440/1024/390 三視窗 UI QA、XSQ 2026 Q1 DOCX、Word COM PDF、逐頁及長評論分頁 QA。
 - [x] 完成文件、全套 tests、Ruff、Django、migrations 與 Compose config。
-- [x] 將一般使用者月結流程收斂為三步：選擇基金；輸入年／月、NAV 及基金經理評論；自動取得 RFR 並產生報告。原有設定、績效、人工 RFR、預覽及定稿控制移至進階入口。
+- [x] 將一般使用者月結流程收斂為三步：選擇基金；按年份檢視既有 NAV 並輸入下一個缺少月份；在每份報告上輸入其基金經理評論，再自動取得 RFR 並產生報告。原有設定、績效、人工 RFR、預覽及定稿控制移至進階入口。
 - [x] 以使用者提供的 2026 Q1 DOCX 作為設計依據，驗證新產生的四頁報告章節順序、內嵌圖表、表格寬度、評論／免責聲明分頁及一致頁尾。
 
 ## 關鍵設計決策

@@ -112,8 +112,8 @@ def test_user_interface_uses_traditional_chinese(client, django_user_model):
     client.force_login(user)
     dashboard = client.get(reverse("dashboard")).content.decode()
     assert "選擇基金" in dashboard
-    assert "輸入 NAV 及基金經理評論" in dashboard
-    assert "基金經理評論" in dashboard
+    assert "輸入每股 NAV" in dashboard
+    assert "評論及產生報告" in dashboard
     assert "Dashboard" not in dashboard
     assert "Select Fund" not in dashboard
 
@@ -149,7 +149,7 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
         fund=fund,
         name="Class A",
         code="simple-a",
-        inception_date=date(2024, 1, 1),
+        inception_date=date(2024, 3, 1),
         inception_nav=Decimal("100"),
         currency="USD",
     )
@@ -158,24 +158,25 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     dashboard_text = dashboard.content.decode()
     assert reverse("simple-entry", args=[share.pk]) in dashboard_text
     assert "選擇基金" in dashboard_text
-    assert "輸入 NAV 及基金經理評論" in dashboard_text
-    assert "產生報告" in dashboard_text
+    assert "輸入每股 NAV" in dashboard_text
+    assert "評論及產生報告" in dashboard_text
     assert "檢視績效" not in dashboard_text
 
     entry = client.get(reverse("simple-entry", args=[share.pk]))
     assert entry.status_code == 200
-    assert entry.context["form"]["year"].value() == 2026
-    assert entry.context["form"]["month"].value() == 6
+    assert entry.context["form"]["valuation_month"].value() == date(2024, 3, 31)
+    assert entry.context["next_period"] == date(2024, 3, 31)
     assert "系統日期：2026 年 7 月 20 日" in entry.content.decode()
-    assert "預設為最近已完成月份：2026 年 6 月" in entry.content.decode()
+    assert "最近已完成月份：2026 年 6 月" in entry.content.decode()
+    assert "2024" in entry.content.decode()
+    assert "3 月" in entry.content.decode()
+    assert 'name="commentary_markdown"' not in entry.content.decode()
 
     future = client.post(
         reverse("simple-entry", args=[share.pk]),
         {
-            "year": "2026",
-            "month": "7",
+            "valuation_month": "2026-07-31",
             "nav_per_share": "105",
-            "commentary_markdown": "未完成月份不可輸入。",
         },
     )
     assert future.status_code == 200
@@ -185,10 +186,8 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     response = client.post(
         reverse("simple-entry", args=[share.pk]),
         {
-            "year": "2024",
-            "month": "3",
+            "valuation_month": "2024-03-31",
             "nav_per_share": "105.123456",
-            "commentary_markdown": "本季維持嚴謹的風險管理。",
         },
     )
     assert response.status_code == 302
@@ -200,22 +199,23 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert report.year == 2024
     assert report.quarter == 1
     assert report.report_date == date(2024, 3, 31)
-    assert report.commentary_markdown == "本季維持嚴謹的風險管理。"
+    assert report.commentary_markdown == ""
+    assert report.commentary_date == date(2024, 3, 31)
     assert response.url == f"{reverse('report-history')}?report={report.pk}"
     assert AuditLog.objects.filter(action="SIMPLE_ENTRY", entity_id=str(report.pk)).exists()
     history = client.get(response.url)
     assert history.status_code == 200
-    assert "系統會自動取得無風險利率" in history.content.decode()
+    assert "系統會自動取得美國財政部 10 年期利率" in history.content.decode()
+    assert "基金經理評論" in history.content.decode()
+    assert "僅儲存評論" in history.content.decode()
     assert reverse("report-generate", args=[report.pk]) in history.content.decode()
     assert reverse("simple-entry", args=[share.pk]) in history.content.decode()
 
     duplicate = client.post(
         reverse("simple-entry", args=[share.pk]),
         {
-            "year": "2024",
-            "month": "3",
+            "valuation_month": "2024-03-31",
             "nav_per_share": "106",
-            "commentary_markdown": "不可覆蓋原有 NAV。",
         },
     )
     assert duplicate.status_code == 200
@@ -223,10 +223,8 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert NAVRecord.objects.filter(share_class=share).count() == 1
 
     abnormal_payload = {
-        "year": "2024",
-        "month": "4",
+        "valuation_month": "2024-04-30",
         "nav_per_share": "200",
-        "commentary_markdown": "四月市場回顧。",
     }
     abnormal = client.post(reverse("simple-entry", args=[share.pk]), abnormal_payload)
     assert abnormal.status_code == 200
@@ -237,11 +235,55 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
         abnormal_payload | {"confirm_large_change": "1"},
     )
     assert confirmed.status_code == 302
-    assert confirmed.url == reverse("dashboard")
+    assert confirmed.url == reverse("simple-entry", args=[share.pk])
     assert NAVRecord.objects.filter(share_class=share).count() == 2
     assert NAVRecord.objects.get(valuation_month=date(2024, 4, 30)).change_acknowledged is True
     q2_report = QuarterlyReport.objects.get(share_class=share, year=2024, quarter=2)
-    assert q2_report.commentary_date == date(2024, 4, 30)
+    assert q2_report.commentary_date == date(2024, 6, 30)
+
+
+@pytest.mark.django_db
+def test_simple_nav_entry_lists_existing_months_and_next_missing_month(
+    client, django_user_model, monkeypatch
+):
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2025, 4, 20))
+    user = django_user_model.objects.create_user("monthly-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Monthly Fund LPF",
+        display_name="Monthly Fund",
+        short_code="monthly-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Monthly objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="monthly-a",
+        inception_date=date(2025, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    for month, value in ((1, "40"), (2, "69")):
+        NAVRecord.objects.create(
+            share_class=share,
+            valuation_month=date(2025, month, 28 if month == 2 else 31),
+            valuation_date=date(2025, month, 28 if month == 2 else 31),
+            nav_per_share=Decimal(value),
+            created_by=user,
+            updated_by=user,
+        )
+
+    response = client.get(reverse("simple-entry", args=[share.pk]))
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert response.context["next_period"] == date(2025, 3, 31)
+    assert response.context["form"]["valuation_month"].value() == date(2025, 3, 31)
+    assert "2025" in content
+    assert "1 月" in content and "40" in content
+    assert "2 月" in content and "69" in content
+    assert "3 月" in content and "新增月份" in content
 
 
 @pytest.mark.django_db
@@ -272,7 +314,6 @@ def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
         year=2024,
         quarter=1,
         report_date=date(2024, 3, 31),
-        commentary_markdown="Commentary",
         created_by=user,
     )
     calls = []
@@ -284,12 +325,31 @@ def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
         "navapp.views.generate_report_files", lambda item, actor: calls.append((item.pk, actor.pk))
     )
 
-    response = client.post(reverse("report-generate", args=[report.pk]))
+    response = client.post(
+        reverse("report-generate", args=[report.pk]),
+        {
+            "inline_commentary": "1",
+            "commentary_markdown": "本季維持審慎的風險管理。",
+        },
+    )
     assert response.status_code == 302
     assert response.url == f"{reverse('report-history')}?report={report.pk}"
     assert calls == [("calculate", report.pk), report.pk, (report.pk, user.pk)]
+    report.refresh_from_db()
+    assert report.commentary_markdown == "本季維持審慎的風險管理。"
+
+    report.commentary_markdown = ""
+    report.save(update_fields=["commentary_markdown", "updated_at"])
+    missing_commentary = client.post(
+        reverse("report-generate", args=[report.pk]),
+        {"inline_commentary": "1", "commentary_markdown": ""},
+    )
+    assert missing_commentary.status_code == 200
+    assert "必須填寫基金經理評論" in missing_commentary.content.decode()
 
     calls.clear()
+    report.commentary_markdown = "Commentary"
+    report.save(update_fields=["commentary_markdown", "updated_at"])
 
     def reject_incomplete_quarter(item):
         calls.append(("calculate", item.pk))
@@ -300,6 +360,66 @@ def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
     assert incomplete.status_code == 200
     assert "缺少估值月份：2024-02" in incomplete.content.decode()
     assert calls == [("calculate", report.pk)]
+
+
+@pytest.mark.django_db
+def test_ready_report_commentary_edit_creates_a_new_version(client, django_user_model):
+    user = django_user_model.objects.create_user("version-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Version Fund LPF",
+        display_name="Version Fund",
+        short_code="version-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Version objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="version-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    original = QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        year=2024,
+        quarter=1,
+        version=1,
+        report_date=date(2024, 3, 31),
+        status=QuarterlyReport.Status.READY,
+        commentary_markdown="Original commentary",
+        snapshot={"identity": {"report_id": 1}},
+        created_by=user,
+    )
+
+    history = client.get(f"{reverse('report-history')}?report={original.pk}")
+    assert "另存評論為新版本" in history.content.decode()
+    assert "建立新版本並重新產生" in history.content.decode()
+
+    response = client.post(
+        reverse("report-generate", args=[original.pk]),
+        {
+            "inline_commentary": "1",
+            "commentary_markdown": "Revised commentary",
+            "action": "save_commentary",
+        },
+    )
+
+    assert response.status_code == 302
+    original.refresh_from_db()
+    revised = QuarterlyReport.objects.get(share_class=share, version=2)
+    assert original.status == QuarterlyReport.Status.READY
+    assert original.commentary_markdown == "Original commentary"
+    assert original.snapshot == {"identity": {"report_id": 1}}
+    assert revised.status == QuarterlyReport.Status.DRAFT
+    assert revised.commentary_markdown == "Revised commentary"
+    assert response.url == f"{reverse('report-history')}?report={revised.pk}"
+    assert AuditLog.objects.filter(
+        entity_id=str(revised.pk), action="CREATE_VERSION_FROM_READY"
+    ).exists()
 
 
 @pytest.mark.django_db

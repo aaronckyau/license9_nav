@@ -7,6 +7,8 @@
 
 一般三步流程採自動 provider 選擇：organization 設為 FRED 但沒有 `FRED_API_KEY` 時，直接改用 `TREASURY_CMT10`，使用者不需要處理環境設定。進階功能若明確指定 FRED，仍要求有效 API key，避免無聲忽略操作者的明確選擇。
 
+yfinance 可以下載 Yahoo Finance 的 `^TNX`（Cboe 10 年期利率指數）歷史值，但 yfinance 官方文件明示該工具未獲 Yahoo 認可，下載介面預期只供個人、研究及教育用途。此應用需要可稽核的正式報告來源，因此不把 yfinance／`^TNX` 納入 production provider；權威預設仍是 U.S. Treasury 官方 `BC_10YEAR`。
+
 Provider 以 timeout/retry 取得每日 published percentage，保存 provider、series、observation date、value、fetch time 與 raw checksum。重複 provider/series/date 使用資料庫 unique constraint 去重。
 
 ## 報告 snapshot

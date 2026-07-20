@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 38 passed, 1 skipped
+pytest -q                                         PASS: 40 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -48,6 +48,8 @@ Public /nav login/logout/static/health/readiness PASS
 `scripts/visual_qa.cjs` 以 Edge 執行 1440×1000、1024×900、390×844。結果：36 screenshots、30 inspections、0 horizontal overflow、0 escaped controls、0 console error、0 page error。JSON：`artifacts/visual-qa/visual-qa-results.json`；三張 contact sheets 與全部頁面截圖同目錄。
 
 最新三步流程以真實 Edge 重新檢查 11 個主要頁面 × 1440、1024、390 三個 viewport，加上登入／登出，共 39 張截圖及 33 次頁面 inspection；0 horizontal overflow、0 escaped control、0 console error、0 page error。結果：`artifacts/simple-workflow-qa/full-suite/visual-qa-results.json`。三個 `simple-entry-*.png` 已逐張檢查；首次檢查發現桌面送出列遮擋評論欄，修正後重跑全套通過。
+
+2026-07-20 最新 UX 增量另以 in-app Edge 驗證按年份 NAV 頁及報告評論卡：1440×1000、1024×900、390×844 均無水平溢出。實際瀏覽器操作成功新增 2025 年 4 月 NAV `151.250000` 並開放 5 月，也成功在指定 report/version 儲存評論後進入產生流程。8 張有效截圖位於 `artifacts/visual-qa-zh/workflow-v2-*.png`。
 
 ## XSQ report QA
 

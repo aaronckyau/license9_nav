@@ -2,7 +2,7 @@
 
 ## 交付摘要
 
-MVP 已推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機應用程式、計算、匯入、RFR、瀏覽器及產物檢查，以及 VPS production Docker／LibreOffice／公開端點 smoke test。正常月結已收斂為「選擇基金 → 輸入月份、NAV 及基金經理評論 → 產生報告」三步；設定、績效、人工 RFR、預覽及定稿保留為進階控制。Django Admin 只供受信任的資料修正人員使用。
+MVP 已推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機應用程式、計算、匯入、RFR、瀏覽器及產物檢查，以及 VPS production Docker／LibreOffice／公開端點 smoke test。後續工作樹把正常月結進一步收斂為「選擇基金 → 按年份輸入下一個缺少月份的 NAV → 在指定報告輸入評論並產生報告」；設定、績效、人工 RFR、預覽及定稿保留為進階控制。Django Admin 只供受信任的資料修正人員使用。
 
 ## Runtime 與入口
 
@@ -67,11 +67,12 @@ DB/media 必須同一 timestamp 並做 off-site encrypted copy；還原後核對
 
 ## 驗證與 artifacts
 
-全套結果：38 passed、1 local-LibreOffice skip；Ruff/Django/migrations/deploy check/Compose config PASS；VPS image build、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面 PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；最新三視窗 QA 為 39 張 screenshots、33 次 inspections、0 failures。
+全套結果：40 passed、1 local-LibreOffice skip；Ruff/Django/migrations PASS；上一個 deployed commit 的 Compose/VPS image、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面 PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；本輪新增 8 張三視窗 NAV／報告評論 QA 截圖於 `artifacts/visual-qa-zh/`。
 
 ## Production 狀態
 
 - GitHub：`https://github.com/aaronckyau/license9_nav`，branch `main`。
 - VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；三步流程 deployment 已於 2026-07-20 完成，部署 commit 以 `git rev-parse HEAD` 核對。
+- 按年份 NAV／報告頁評論的後續 UX 變更目前只在本機工作樹完成，尚未 commit、push 或部署。
 - Nginx 設定更新前備份：`/etc/nginx/sites-available/4mstrategy.com.bak.20260720T020446Z.nav-deploy`。
 - 後續操作重點是首次登入更改管理員密碼、安排加密 off-site backup 及定期 restore drill；不需再改 MVP 架構。

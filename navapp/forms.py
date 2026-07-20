@@ -414,12 +414,50 @@ class CommentaryForm(forms.ModelForm):
         }
 
     def clean_commentary_markdown(self):
-        value = self.cleaned_data["commentary_markdown"]
-        if re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
-            raise forms.ValidationError("不支援原始 HTML，請使用安全的 Markdown 語法。")
-        if not value.strip():
-            raise forms.ValidationError("必須填寫基金經理評論。")
-        return value
+        return validate_commentary_markdown(self.cleaned_data["commentary_markdown"])
+
+
+def validate_commentary_markdown(value: str) -> str:
+    value = value.strip()
+    if re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
+        raise forms.ValidationError("不支援原始 HTML，請使用安全的 Markdown 語法。")
+    if not value:
+        raise forms.ValidationError("必須填寫基金經理評論。")
+    return value
+
+
+class ReportHistoryCommentaryForm(forms.ModelForm):
+    class Meta:
+        model = QuarterlyReport
+        fields = ("commentary_markdown",)
+        labels = {"commentary_markdown": "基金經理評論"}
+        widgets = {
+            "commentary_markdown": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": "輸入本季度的基金經理評論……",
+                }
+            )
+        }
+
+    def clean_commentary_markdown(self):
+        return validate_commentary_markdown(self.cleaned_data["commentary_markdown"])
+
+
+def next_missing_nav_month(share_class: ShareClass, today: date | None = None) -> date | None:
+    completed_month = latest_completed_month(today)
+    candidate = month_end(share_class.inception_date)
+    existing = set(
+        share_class.nav_records.filter(
+            is_active=True,
+            valuation_month__lte=completed_month,
+        ).values_list("valuation_month", flat=True)
+    )
+    while candidate <= completed_month:
+        if candidate not in existing:
+            return candidate
+        candidate = month_end(candidate + timedelta(days=1))
+    return None
 
 
 def latest_completed_month(today: date | None = None) -> date:
@@ -430,12 +468,7 @@ def latest_completed_month(today: date | None = None) -> date:
 
 
 class SimpleEntryForm(forms.Form):
-    year = forms.TypedChoiceField(label="年份", coerce=int)
-    month = forms.TypedChoiceField(
-        label="月份",
-        coerce=int,
-        choices=[(month, f"{month} 月") for month in range(1, 13)],
-    )
+    valuation_month = forms.DateField(widget=forms.HiddenInput)
     nav_per_share = forms.DecimalField(
         label="每股 NAV",
         max_digits=38,
@@ -443,54 +476,44 @@ class SimpleEntryForm(forms.Form):
         min_value=Decimal("0.000000000000000001"),
         help_text="請輸入該月份正式的每股 NAV。",
     )
-    commentary_markdown = forms.CharField(
-        label="基金經理評論",
-        widget=forms.Textarea(attrs={"rows": 10}),
-        help_text="支援段落、粗體、斜體、項目符號及編號清單。",
-    )
     confirm_large_change = forms.BooleanField(required=False, widget=forms.HiddenInput)
 
     def __init__(self, *args, share_class: ShareClass, **kwargs):
         self.share_class = share_class
         self.system_date = timezone.localdate()
         self.default_period = latest_completed_month(self.system_date)
+        self.next_period = next_missing_nav_month(self.share_class, self.system_date)
         self.large_change_warning = ""
-        kwargs.setdefault(
-            "initial",
-            {"year": self.default_period.year, "month": self.default_period.month},
-        )
+        kwargs.setdefault("initial", {"valuation_month": self.next_period})
         super().__init__(*args, **kwargs)
-        first_year = min(self.share_class.inception_date.year, self.default_period.year)
-        last_year = self.default_period.year
-        self.fields["year"].choices = [
-            (year, str(year)) for year in range(last_year, first_year - 1, -1)
-        ]
-
-    def clean_commentary_markdown(self):
-        value = self.cleaned_data["commentary_markdown"]
-        if re.search(r"<\s*/?\s*[a-zA-Z][^>]*>", value):
-            raise forms.ValidationError("不支援原始 HTML，請使用安全的 Markdown 語法。")
-        return value.strip()
 
     def clean(self):
         cleaned = super().clean()
-        year = cleaned.get("year")
-        month = cleaned.get("month")
+        valuation_month = cleaned.get("valuation_month")
         nav_value = cleaned.get("nav_per_share")
-        if not year or not month:
+        if not valuation_month:
             return cleaned
-        valuation_month = month_end(date(year, month, 1))
+        valuation_month = month_end(valuation_month)
         cleaned["valuation_month"] = valuation_month
         if valuation_month > self.default_period:
-            self.add_error("month", "估值月份不得晚於最近已完成月份。")
+            self.add_error("valuation_month", "估值月份不得晚於最近已完成月份。")
             return cleaned
         if valuation_month < month_end(self.share_class.inception_date):
-            self.add_error("month", "估值月份不得早於股份類別成立月份。")
+            self.add_error("valuation_month", "估值月份不得早於股份類別成立月份。")
             return cleaned
         if self.share_class.nav_records.filter(
             valuation_month=valuation_month, is_active=True
         ).exists():
-            self.add_error("month", "該月份已有 NAV 紀錄，為避免重複不會覆蓋原有資料。")
+            self.add_error("valuation_month", "該月份已有 NAV 紀錄，為避免重複不會覆蓋原有資料。")
+            return cleaned
+        if self.next_period is None:
+            self.add_error("valuation_month", "所有已完成月份均已有 NAV 紀錄。")
+            return cleaned
+        if valuation_month != self.next_period:
+            self.add_error(
+                "valuation_month",
+                f"目前應輸入 {self.next_period:%Y 年 %m 月}；請重新整理頁面後再試。",
+            )
             return cleaned
         if nav_value is None:
             return cleaned

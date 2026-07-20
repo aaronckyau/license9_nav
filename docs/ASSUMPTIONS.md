@@ -19,8 +19,10 @@
 15. 本機可用的 `Word.Application` COM 匯出回報 Creator 為 WPS Docs，視為主機 Office 相容層；production 不依賴它。
 16. Windows WSL/Docker Desktop `Wsl/CallMsi/Install/REGDB_E_CLASSNOTREG` 是外部 host-level 限制；本工作不修改任何全域 Windows/WSL/Docker/registry/BIOS 設定。
 17. Production 啟用一年 HSTS，但暫不啟用 `includeSubDomains` 或 `preload`，因為兩者影響同網域其他服務，須先做全域 TLS inventory；因此 `check --deploy` 保留 W005/W021 兩項已知警告。
-18. 三步流程的月份預設為「系統日期所屬月份之前，最近已完整結束的月份」；若系統日期正好是月末，則預設該月。以本次系統日期 2026-07-20 計算，預設為 2026 年 6 月。
-19. 使用者可選最近已完成月份範圍內的任何 1–12 月；系統以該月月末作為簡化流程的正式 valuation month/date，並自動歸入所屬季度。實際估值日不同或需要 Indicative 狀態時，使用既有的進階 NAV 表單，不改變原始欄位能力。
-20. 簡化頁面每次儲存一筆正式 NAV 及該季度的基金經理評論。非季末月份儲存後返回基金選擇頁；3、6、9、12 月才前往產生報告。季度資料未齊時，產生動作會先列出缺月，再進行 RFR 取得，且不使用假資料補足。
+18. 三步流程以「系統日期所屬月份之前，最近已完整結束的月份」作為可輸入上限；若系統日期正好是月末，則包含該月。以本次系統日期 2026-07-20 計算，上限為 2026 年 6 月。
+19. 一般 NAV 頁按年份顯示既有月份，且只開放自成立月份起最早缺少的一個月份；系統以該月月末作為正式 valuation month/date，避免跳月及重複。實際估值日不同、Indicative 狀態、歷史補匯或資料修正仍使用進階 NAV 表單。
+20. 簡化 NAV 頁每次只儲存一筆正式 NAV，並建立或重用所屬季度的 draft report；基金經理評論不再附著於 NAV，而是在報告頁按 report/version 獨立輸入。非季末月份儲存後繼續顯示下一個缺月；季末月份前往評論及產生報告。季度資料未齊時，產生動作會先列出缺月，且不使用假資料補足。
 21. 使用者提供的 `X Squared Capital Management LPF Quarterly Newsletter 2026Q1_draft_pending commentary.docx` 與 repository 內參考 DOCX 雜湊相同，作為報告結構及視覺設計依據。內建產生器重建相同章節層次並嵌入原生圖表圖片，不複製來源檔的外部 Excel 關聯。
 22. 三步流程的官方 RFR 是自動模式：organization 選 FRED 但未設定 optional `FRED_API_KEY` 時，系統改用不需 key 的 U.S. Treasury 10-year 官方資料。操作者明確指定 FRED 時不 fallback，仍要求 key。
+23. yfinance 的 `^TNX` 可作參考性 10 年期利率資料，但 yfinance 明示其未獲 Yahoo 認可且資料介面只供個人／研究用途，因此不作權威報告來源。Production 繼續使用 U.S. Treasury 官方 `BC_10YEAR`，FRED `DGS10` 為可選官方來源。
+24. `READY` 報告已具有可下載產物；若在報告頁修改評論，系統建立下一個 draft version，再保存或產生，不會覆寫舊 version 的評論、snapshot 或檔案。`DRAFT`／`GENERATION_FAILED` 尚未形成可交付版本，可在原 version 繼續編輯。
