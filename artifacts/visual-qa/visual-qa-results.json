@@ -1,0 +1,482 @@
+[
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\dashboard-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-list-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-setup-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/1/edit/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-history-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-entry-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/new/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-review-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/review/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\manager-commentary-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/commentary/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-preview-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/preview/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-history-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\organization-settings-desktop-1440.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/settings/organization/",
+    "viewportWidth": 1440,
+    "documentWidth": 1440,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "browser-errors",
+    "viewport": {
+      "name": "desktop-1440",
+      "width": 1440,
+      "height": 1000
+    },
+    "consoleErrors": [],
+    "pageErrors": []
+  },
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\dashboard-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-list-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-setup-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/1/edit/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-history-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-entry-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/new/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-review-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/review/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\manager-commentary-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/commentary/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-preview-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/preview/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-history-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\organization-settings-tablet-1024.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/settings/organization/",
+    "viewportWidth": 1024,
+    "documentWidth": 1024,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "browser-errors",
+    "viewport": {
+      "name": "tablet-1024",
+      "width": 1024,
+      "height": 900
+    },
+    "consoleErrors": [],
+    "pageErrors": []
+  },
+  {
+    "page": "dashboard",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\dashboard-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-list",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-list-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "fund-setup",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\fund-setup-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/funds/1/edit/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-history",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-history-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "nav-entry",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\nav-entry-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/classes/1/nav/new/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-review",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-review-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/review/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "manager-commentary",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\manager-commentary-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/commentary/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-preview",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-preview-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/1/preview/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "report-history",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\report-history-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/reports/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "organization-settings",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "screenshot": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\visual-qa\\organization-settings-mobile-390.png",
+    "title": "NAV Quarterly Reporting",
+    "url": "http://127.0.0.1:8019/settings/organization/",
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false,
+    "escapedControls": []
+  },
+  {
+    "page": "browser-errors",
+    "viewport": {
+      "name": "mobile-390",
+      "width": 390,
+      "height": 844
+    },
+    "consoleErrors": [],
+    "pageErrors": []
+  }
+]

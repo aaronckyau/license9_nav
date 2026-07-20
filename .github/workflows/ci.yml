@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key-with-at-least-fifty-characters-0001
+      DJANGO_DEBUG: "false"
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      TIME_ZONE: Asia/Hong_Kong
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install report runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libreoffice-writer fonts-liberation2 poppler-utils
+
+      - name: Install application and test dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Ruff check
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Django system and migration checks
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate
+          python manage.py migrate --check
+
+      - name: Test suite including report and Excel regressions
+        run: pytest -q
+
+      - name: Real LibreOffice report smoke test
+        run: |
+          python manage.py generate_sample_report --finalize
+          python manage.py shell -c "from navapp.models import GeneratedFile; assert GeneratedFile.objects.filter(file_type='DOCX', size__gt=0).exists(); assert GeneratedFile.objects.filter(file_type='PDF', size__gt=0).exists()"
+          docx_path="$(find media/reports -name quarterly-report.docx -print -quit)"
+          test -n "$docx_path"
+          python scripts/inspect_docx.py "$docx_path"

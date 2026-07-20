@@ -1,0 +1,35 @@
+{
+  "corrupt_member": null,
+  "drawing_count": 2,
+  "embedded_media": [
+    "word/media/image1.jpeg",
+    "word/media/image2.png"
+  ],
+  "embedded_spreadsheets": [],
+  "external_excel_relationships": [],
+  "external_relationships": [],
+  "fixed_row_heights": [],
+  "footer_texts": [
+    "xsq | Report 1 | 2026 Q1 v1 | Generated 2026-07-18 02:46 UTC | Page ",
+    "xsq | Report 1 | 2026 Q1 v1 | Generated 2026-07-18 02:46 UTC | Page ",
+    "xsq | Report 1 | 2026 Q1 v1 | Generated 2026-07-18 02:46 UTC | Page "
+  ],
+  "metadata": {
+    "author": "NAV Quarterly Reporting",
+    "comments": "Snapshot captured at 2026-07-18T02:46:14.326213+00:00",
+    "keywords": "report_id=1; version=1; formula=legacy_excel_v1",
+    "subject": "NAV quarterly report for MANU",
+    "title": "X Squared Capital Management LPF - 2026 Q1 Quarterly Report"
+  },
+  "missing_relationship_targets": [],
+  "path": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\artifacts\\sample-reports\\XSQ_2026_Q1_Quarterly_Report.docx",
+  "sha256": "d4a8aa2cce558ffb46fd5564f63fcc6561be23951894c219d9a4341a5341f8b2",
+  "size": 169030,
+  "table_widths_dxa": [
+    9864,
+    9864,
+    9864,
+    9864
+  ],
+  "valid": true
+}

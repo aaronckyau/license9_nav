@@ -1,0 +1,62 @@
+{% load static i18n %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NAV Quarterly Reporting{% endblock %}</title>
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="{% url 'dashboard' %}">
+      <span class="brand-mark">NAV</span>
+      <span><small>QUARTERLY REPORTING</small><strong>{{ organization_settings.display_name|default:"Fund Reporting" }}</strong></span>
+    </a>
+    {% if user.is_authenticated %}
+      <nav aria-label="Primary navigation">
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'fund-list' %}">Funds</a>
+        <a href="{% url 'report-history' %}">Reports</a>
+        <a href="{% url 'audit-log' %}">Audit</a>
+        <a href="{% url 'organization-settings' %}">Settings</a>
+      </nav>
+      <div class="account-menu">
+        <a href="{% url 'password_change' %}">{{ user.get_username }}</a>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">Log out</button></form>
+      </div>
+    {% endif %}
+  </header>
+  {% if user.is_authenticated and report %}
+    <nav class="workflow" aria-label="Report workflow">
+      <a href="{% url 'dashboard' %}"><b>0</b>Select Fund</a>
+      <a href="{% url 'fund-edit' report.fund_id %}"><b>1</b>Fund Setup</a>
+      <a href="{% url 'nav-history' report.share_class_id %}"><b>2</b>Enter NAV</a>
+      <a href="{% url 'report-review' report.pk %}"><b>3</b>Review Performance</a>
+      <a href="{% url 'report-commentary' report.pk %}"><b>4</b>Manager Commentary</a>
+      <a href="{% url 'report-preview' report.pk %}"><b>5</b>Preview</a>
+      <a href="{% url 'report-review' report.pk %}#generate"><b>6</b>Generate Report</a>
+    </nav>
+  {% elif user.is_authenticated %}
+    <nav class="workflow" aria-label="Application workflow">
+      <a href="{% url 'dashboard' %}"><b>0</b>Select Fund</a>
+      <a href="{% url 'fund-list' %}"><b>1</b>Fund Setup</a>
+      <a href="{% url 'dashboard' %}"><b>2</b>Enter NAV</a>
+      <a href="{% url 'report-history' %}"><b>3</b>Review Performance</a>
+      <a href="{% url 'report-history' %}"><b>4</b>Manager Commentary</a>
+      <a href="{% url 'report-history' %}"><b>5</b>Preview</a>
+      <a href="{% url 'report-history' %}"><b>6</b>Generate Report</a>
+    </nav>
+  {% endif %}
+  <main id="main-content" class="page-shell">
+    {% if messages %}
+      <div class="messages" aria-live="polite">
+        {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

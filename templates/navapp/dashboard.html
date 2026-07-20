@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load nav_tags %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">STEP 0</p><h1>Select Fund / Share Class</h1><p class="muted">Choose a reporting series, enter NAV, or continue a quarterly report.</p></div>
+  <div class="actions"><a class="button secondary" href="{% url 'fund-create' %}">Create Fund</a><a class="button primary" href="{% url 'report-create' %}">Create Quarterly Report</a></div>
+</div>
+<section class="panel">
+  {% if cards %}
+  <div class="card-grid">
+    {% for card in cards %}
+    <article class="fund-card">
+      <div class="card-top"><span class="pill">{{ card.share_class.fund.short_code|upper }}</span><span class="status {{ card.latest_report.status|default:'DRAFT'|lower }}">{{ card.status }}</span></div>
+      <h2>{{ card.share_class.fund.display_name }}</h2>
+      <p class="muted">{{ card.share_class.name }} · {{ card.share_class.currency }} · {{ card.share_class.get_return_basis_display }}</p>
+      <dl class="metric-pair"><div><dt>Latest NAV month</dt><dd>{{ card.latest_nav.valuation_month|date:"M Y"|default:"—" }}</dd></div><div><dt>NAV per Share</dt><dd>{{ card.latest_nav.nav_per_share|nav_display:6 }}</dd></div></dl>
+      <div class="card-actions"><a href="{% url 'nav-history' card.share_class.pk %}">NAV history</a>{% if card.latest_report %}<a href="{% url 'report-review' card.latest_report.pk %}">Continue report</a>{% endif %}</div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty-state"><h2>No funds yet</h2><p>Create a fund and share class to begin.</p><a class="button primary" href="{% url 'fund-create' %}">Create Fund</a></div>
+  {% endif %}
+</section>
+{% endblock %}

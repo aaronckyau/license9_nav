@@ -1,0 +1,17 @@
+*
+!pyproject.toml
+!manage.py
+!config/
+!config/**
+!navapp/
+!navapp/**
+!templates/
+!templates/**
+!static/
+!static/**
+!scripts/
+!scripts/**
+!deploy/
+!deploy/**
+!reference/
+!reference/**

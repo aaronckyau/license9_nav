@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">MASTER DATA</p><h1>Funds</h1></div><a class="button primary" href="{% url 'fund-create' %}">Create Fund</a></div>
+<section class="panel table-wrap"><table class="fund-list-table mobile-cards"><thead><tr><th>Code</th><th>Fund</th><th class="mobile-hide">Domicile</th><th class="mobile-hide">Share Classes</th><th>Status</th><th>Actions</th></tr></thead><tbody>{% for fund in funds %}<tr><td data-label="Code">{{ fund.short_code|upper }}</td><td data-label="Fund">{{ fund.display_name }}</td><td class="mobile-hide" data-label="Domicile">{{ fund.domicile }}</td><td class="mobile-hide" data-label="Share Classes">{{ fund.share_classes.count }}</td><td data-label="Status"><span class="status">{{ fund.is_active|yesno:"Active,Archived" }}</span></td><td data-label="Actions"><span class="row-actions"><a href="{% url 'fund-edit' fund.pk %}">Edit</a><a href="{% url 'share-class-create' fund.pk %}">Add class</a></span></td></tr>{% empty %}<tr><td colspan="6">No funds configured.</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

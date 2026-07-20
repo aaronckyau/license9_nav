@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Sign in | NAV Quarterly Reporting{% endblock %}
+{% block content %}
+<section class="auth-card panel">
+  <p class="eyebrow">INTERNAL ACCESS</p>
+  <h1>Sign in</h1>
+  <p class="muted">Use your authorized reporting account.</p>
+  <form method="post" class="stack-form">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+    <button class="button primary" type="submit">Sign in</button>
+  </form>
+</section>
+{% endblock %}
