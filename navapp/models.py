@@ -362,6 +362,10 @@ class RFRObservation(models.Model):
 
 
 class QuarterlyReport(models.Model):
+    class ReportType(models.TextChoices):
+        MONTHLY = "MONTHLY", "Monthly"
+        QUARTERLY = "QUARTERLY", "Quarterly"
+
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
         READY = "READY", "Ready"
@@ -371,7 +375,15 @@ class QuarterlyReport(models.Model):
 
     fund = models.ForeignKey(Fund, on_delete=models.PROTECT, related_name="reports")
     share_class = models.ForeignKey(ShareClass, on_delete=models.PROTECT, related_name="reports")
+    report_type = models.CharField(
+        max_length=12,
+        choices=ReportType.choices,
+        default=ReportType.QUARTERLY,
+    )
     year = models.PositiveIntegerField()
+    report_month = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
     quarter = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(4)]
     )
@@ -396,12 +408,17 @@ class QuarterlyReport(models.Model):
     finalized_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-year", "-quarter", "-version"]
-        indexes = [models.Index(fields=["share_class", "year", "quarter", "status"])]
+        ordering = ["-report_date", "-version"]
+        indexes = [
+            models.Index(
+                fields=["share_class", "report_type", "report_date", "status"],
+                name="navapp_report_period_idx",
+            )
+        ]
         constraints = [
             models.UniqueConstraint(
-                fields=["share_class", "year", "quarter", "version"],
-                name="unique_report_version",
+                fields=["share_class", "report_type", "report_date", "version"],
+                name="unique_report_period_version",
             )
         ]
 
@@ -409,10 +426,28 @@ class QuarterlyReport(models.Model):
         super().clean()
         if self.share_class_id and self.fund_id and self.share_class.fund_id != self.fund_id:
             raise ValidationError({"share_class": "股份類別必須屬於所選基金。"})
-        if self.report_date != self.quarter_end:
+        if not self.report_date:
+            return
+        if self.report_date != month_end(self.report_date):
+            raise ValidationError({"report_date": "報告日期必須是日曆月底。"})
+        if self.year != self.report_date.year:
+            raise ValidationError({"year": "報告年度必須與報告日期一致。"})
+        if self.report_month != self.report_date.month:
+            raise ValidationError({"report_month": "報告月份必須與報告日期一致。"})
+        expected_quarter = (self.report_date.month - 1) // 3 + 1
+        if self.quarter != expected_quarter:
+            raise ValidationError({"quarter": "季度必須與報告月份一致。"})
+        if self.report_type == self.ReportType.QUARTERLY and self.report_date != self.quarter_end:
             raise ValidationError({"report_date": "報告日期必須是該季度的日曆季末。"})
 
     def save(self, *args, **kwargs):
+        if self.report_date:
+            if not self.report_month:
+                self.report_month = self.report_date.month
+            if not self.year:
+                self.year = self.report_date.year
+            if not self.quarter:
+                self.quarter = (self.report_date.month - 1) // 3 + 1
         if self.pk:
             old = QuarterlyReport.objects.filter(pk=self.pk).first()
             if old and old.status in {self.Status.FINAL, self.Status.STALE}:
@@ -423,7 +458,9 @@ class QuarterlyReport(models.Model):
                 immutable = (
                     "fund_id",
                     "share_class_id",
+                    "report_type",
                     "year",
+                    "report_month",
                     "quarter",
                     "version",
                     "report_date",
@@ -448,7 +485,19 @@ class QuarterlyReport(models.Model):
 
     @property
     def label(self) -> str:
-        return f"{self.year} Q{self.quarter} v{self.version}"
+        return self.period_label
+
+    @property
+    def period_label(self) -> str:
+        if self.report_type == self.ReportType.MONTHLY:
+            return f"{self.year} 年 {self.report_month} 月月報"
+        return f"{self.year} 年第 {self.quarter} 季季報"
+
+    @property
+    def period_label_en(self) -> str:
+        if self.report_type == self.ReportType.MONTHLY:
+            return f"{self.report_date:%B %Y} Monthly Report"
+        return f"{self.year} Q{self.quarter} Quarterly Report"
 
     def get_absolute_url(self) -> str:
         return reverse("report-review", args=[self.pk])

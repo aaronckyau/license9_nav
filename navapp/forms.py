@@ -375,21 +375,56 @@ class BulkImportForm(forms.Form):
         return uploaded
 
 
-class ReportCreateForm(forms.ModelForm):
-    class Meta:
-        model = QuarterlyReport
-        fields = ("share_class", "year", "quarter")
-        labels = {"share_class": "股份類別", "year": "報告年度", "quarter": "季度"}
+class ReportCreateForm(forms.Form):
+    share_class = forms.ModelChoiceField(
+        label="股份類別",
+        queryset=ShareClass.objects.none(),
+    )
+    report_type = forms.ChoiceField(
+        label="報告類型",
+        choices=(
+            (QuarterlyReport.ReportType.MONTHLY, "月報"),
+            (QuarterlyReport.ReportType.QUARTERLY, "季報"),
+        ),
+    )
+    year = forms.IntegerField(label="報告年度", min_value=1900, max_value=9999)
+    month = forms.TypedChoiceField(
+        label="截止月份",
+        choices=((month, f"{month} 月") for month in range(1, 13)),
+        coerce=int,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["share_class"].queryset = ShareClass.objects.filter(
+            is_active=True,
+            fund__is_active=True,
+        ).select_related("fund")
+        completed = latest_completed_month()
+        self.fields["year"].initial = completed.year
+        self.fields["month"].initial = completed.month
 
     def clean(self):
         cleaned = super().clean()
         year = cleaned.get("year")
-        quarter = cleaned.get("quarter")
-        if year and quarter:
-            month = quarter * 3
+        month = cleaned.get("month")
+        report_type = cleaned.get("report_type")
+        share_class = cleaned.get("share_class")
+        if year and month:
             report_date = month_end(date(year, month, 1))
             cleaned["report_date"] = report_date
-            self.instance.report_date = report_date
+            cleaned["quarter"] = (month - 1) // 3 + 1
+            if report_date > latest_completed_month():
+                self.add_error("month", "不可選擇尚未完成的月份。")
+            if share_class and report_date < month_end(share_class.inception_date):
+                self.add_error("month", "報告月份不可早於股份類別成立月份。")
+            if report_type == QuarterlyReport.ReportType.QUARTERLY and month not in {
+                3,
+                6,
+                9,
+                12,
+            }:
+                self.add_error("month", "季報截止月份必須是 3、6、9 或 12 月。")
         return cleaned
 
 
@@ -435,7 +470,7 @@ class ReportHistoryCommentaryForm(forms.ModelForm):
             "commentary_markdown": forms.Textarea(
                 attrs={
                     "rows": 6,
-                    "placeholder": "輸入本季度的基金經理評論……",
+                    "placeholder": "輸入所選報告期間的基金經理評論……",
                 }
             )
         }

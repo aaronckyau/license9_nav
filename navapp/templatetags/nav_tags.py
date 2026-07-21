@@ -38,6 +38,7 @@ def nav_display(value, places=6):
 def metric_label(value):
     labels = {
         "latest_quarter_return": "最新季度回報",
+        "latest_period_return": "所選期間回報",
         "ytd_return": "年初至今回報",
         "itd_return": "成立至今回報",
         "annualized_return": "年化回報",
@@ -86,7 +87,7 @@ def choice_label(value):
         "MANUAL_RFR_OVERRIDE": "手動覆寫無風險利率",
         "SIMPLE_ENTRY": "三步流程輸入",
         "MARK_REPORTS_STALE": "標示報告需重新產生",
-        "NAV Quarterly Reporting": "NAV 季度報告系統",
+        "NAV Quarterly Reporting": "NAV 報告系統",
     }
     return labels.get(str(value), value)
 

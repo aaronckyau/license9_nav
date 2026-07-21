@@ -1,12 +1,14 @@
 # Implementation Status
 
-最後更新：2026-07-20
+最後更新：2026-07-21
 
 ## 狀態
 
 MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/`。Production PostgreSQL、Gunicorn、Nginx、LibreOffice、登入及報表 smoke 均已實際驗證。
 
 2026-07-20 的三步月結版本已推送 GitHub 並部署至 production，使用者提供的 XSQ 2026 Q1 DOCX 作為新版報告設計依據。部署後已通過 Docker build、migration、LibreOffice DOCX/PDF smoke、公開 health/readiness 及 authenticated HTTPS 三步流程檢查。
+
+2026-07-21 更新把「評論及產生報告」改為月報／季報期間選擇器；一般使用者每個期間只操作一份現行報告，不再看到版本或 NAV／報告進階連結。Production 官方 Treasury `BC_10YEAR` 連線及 2026-06-30 的 12 筆觀察值已重新實測成功。
 
 ## 已完成
 
@@ -17,12 +19,12 @@ MVP 已完成並部署至 Contabo Linux VPS 的 `https://www.4mstrategy.com/nav/
 - Commentary/preview/versioning、DOCX/PDF、hash、外部 relationship audit、final immutability/staleness/audit。
 - XSQ 45 筆 legacy workbook 匯入及 2026 Q1 真實樣本報表。
 - Dockerfile、Compose、Nginx、entrypoint、health checks、backup/restore、CI 與完整文件。
-- 44 passed、1 個因本機無 LibreOffice 而 skip；最新 NAV 年度儀表板另完成 1440、1024、390、360 四視窗實際驗證，無水平溢出。
+- 50 passed、1 個因本機無 LibreOffice 而 skip；最新 NAV 年度儀表板另完成 1440、1024、390、360 四視窗實際驗證，無水平溢出。
 - GitHub `main`、VPS `/root/apps/license9_nav`、subpath `/nav` 與 loopback port `5430` 已部署。
 - VPS Docker image build、三個 healthy containers、migration、`check --deploy`、LibreOffice DOCX/PDF smoke 與 public login/logout 已通過。
 - 一般使用者網站已完整繁體中文化，包括登入、導覽、三步工作流程、表單、狀態、驗證訊息、績效檢視、RFR、評論、預覽、報告歷史及稽核頁；專有名詞及基金資料保留原文。
 - NAV 頁按年份列出既有月份，只開放最早缺少的月份輸入，儲存後立即前進下一個月份；阻止跳月／重複 NAV，並保留異常變動的第二次確認。
-- 基金經理評論已移到「評論及產生報告」頁，每個 report/version 使用自己的評論欄，一次提交便儲存評論並產生報告。
+- 基金經理評論已移到「評論及產生報告」頁，每個報告期間使用自己的評論欄，一次提交便儲存評論並產生報告。
 - 產生報告時自動更新官方 RFR；已有具理由的人工 RFR 時不覆寫。產生完成後返回報告紀錄並直接提供下載。
 - 中文版 1440×1000、1024×900、390×844 共 30 頁面／viewport inspections，無水平溢出、殘留的核心英文操作標籤或舊術語「管理員評論」。
 

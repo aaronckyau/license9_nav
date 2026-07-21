@@ -1,0 +1,35 @@
+{
+  "corrupt_member": null,
+  "drawing_count": 2,
+  "embedded_media": [
+    "word/media/image1.jpeg",
+    "word/media/image2.png"
+  ],
+  "embedded_spreadsheets": [],
+  "external_excel_relationships": [],
+  "external_relationships": [],
+  "fixed_row_heights": [],
+  "footer_texts": [
+    "xsq | Report 6 | June 2026 Monthly Report | Generated 2026-07-21 02:16 UTC | Page ",
+    "xsq | Report 6 | June 2026 Monthly Report | Generated 2026-07-21 02:16 UTC | Page ",
+    "xsq | Report 6 | June 2026 Monthly Report | Generated 2026-07-21 02:16 UTC | Page "
+  ],
+  "metadata": {
+    "author": "NAV Quarterly Reporting",
+    "comments": "Snapshot captured at 2026-07-21T02:16:56.126849+00:00",
+    "keywords": "report_id=6; version=1; formula=legacy_excel_v1",
+    "subject": "NAV monthly report for MANU",
+    "title": "X Squared Capital Management LPF - June 2026 Monthly Report"
+  },
+  "missing_relationship_targets": [],
+  "path": "C:\\Users\\aaron\\Documents\\license9\\monthly_nav\\media\\reports\\6\\v1\\monthly-report.docx",
+  "sha256": "70abc65bc10ca5c36e3232d4402e9a04ecefb76c901aec9abbb51a1af64c52bb",
+  "size": 167267,
+  "table_widths_dxa": [
+    9864,
+    9864,
+    9864,
+    9864
+  ],
+  "valid": true
+}

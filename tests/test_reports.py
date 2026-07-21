@@ -150,6 +150,74 @@ def test_docx_package_contains_sections_table_values_chart_and_no_excel_links(re
 
 
 @pytest.mark.django_db
+def test_monthly_docx_uses_monthly_period_and_return_table(report_fixture):
+    report, _, tmp_path = report_fixture
+    report.report_type = QuarterlyReport.ReportType.MONTHLY
+    report.report_month = 2
+    report.report_date = date(2024, 2, 29)
+    report.commentary_date = report.report_date
+    report.save(
+        update_fields=[
+            "report_type",
+            "report_month",
+            "report_date",
+            "commentary_date",
+            "updated_at",
+        ]
+    )
+
+    snapshot, output = _build_docx(report, tmp_path)
+    document = Document(output)
+    paragraph_text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    table_text = "\n".join(
+        cell.text for table in document.tables for row in table.rows for cell in row.cells
+    )
+
+    assert snapshot["identity"]["report_type"] == "MONTHLY"
+    assert snapshot["identity"]["period_label"] == "2024 年 2 月月報"
+    assert snapshot["calculation"]["report_type"] == "MONTHLY"
+    assert "February 2024 Monthly Report" in paragraph_text
+    assert "Fund Performance (Monthly Returns)" in paragraph_text
+    assert "2024-02" in table_text
+    assert "103" in table_text
+    assert "1.98%" in table_text
+    assert all("Version" not in footer.text for footer in document.sections[0].footer.paragraphs)
+
+
+@pytest.mark.django_db
+def test_monthly_generation_uses_builtin_layout_when_quarterly_custom_template_is_configured(
+    report_fixture, monkeypatch
+):
+    report, user, _ = report_fixture
+    report.report_type = QuarterlyReport.ReportType.MONTHLY
+    report.report_month = 3
+    report.save(update_fields=["report_type", "report_month", "updated_at"])
+    report.fund.custom_docx_template.name = "funds/templates/quarterly-only.docx"
+    report.fund.save(update_fields=["custom_docx_template", "updated_at"])
+    custom_calls = []
+
+    def reject_custom(*args, **kwargs):
+        custom_calls.append((args, kwargs))
+        raise AssertionError("monthly reports must not use a quarterly-only custom template")
+
+    def fake_convert(docx_path, output_dir):
+        pdf = output_dir / f"{docx_path.stem}.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n% monthly fallback test\n")
+        return pdf
+
+    monkeypatch.setattr(reports, "build_custom_docx", reject_custom)
+    monkeypatch.setattr(reports, "convert_docx_to_pdf", fake_convert)
+    generated = generate_report_files(report, user)
+
+    assert custom_calls == []
+    assert {item.file_type for item in generated} == {"DOCX", "PDF"}
+    monthly_docx = next(item.absolute_path for item in generated if item.file_type == "DOCX")
+    assert "Fund Performance (Monthly Returns)" in "\n".join(
+        paragraph.text for paragraph in Document(monthly_docx).paragraphs
+    )
+
+
+@pytest.mark.django_db
 def test_long_commentary_flows_and_snapshot_survives_fund_edit(report_fixture):
     report, _, tmp_path = report_fixture
     report.commentary_markdown = "\n\n".join(

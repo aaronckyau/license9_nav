@@ -71,6 +71,27 @@ def test_quarterly_matrix_first_partial_quarter_and_ytd():
     assert result["quarterly_matrix"]["2024"]["ytd"]["raw"] == "0.05"
 
 
+def test_monthly_report_uses_month_end_and_exposes_latest_month_return():
+    points = [
+        NavPoint(date(2024, 1, 31), date(2024, 1, 31), Decimal("101")),
+        NavPoint(date(2024, 2, 29), date(2024, 2, 29), Decimal("103")),
+    ]
+
+    result = calculate_performance(
+        points=points,
+        inception_nav=Decimal("100"),
+        inception_date=date(2024, 1, 1),
+        report_end=date(2024, 2, 29),
+        report_type="MONTHLY",
+    )
+
+    assert result["report_type"] == "MONTHLY"
+    assert result["metrics_raw"]["latest_period_return"] == str(
+        Decimal("103") / Decimal("101") - Decimal(1)
+    )
+    assert result["details"]["latest_period_return"]["formula"] == "NAV[t] / NAV[t-1] - 1"
+
+
 def test_itd_does_not_assume_inception_nav_is_100():
     points = [
         NavPoint(date(2024, 1, 31), date(2024, 1, 31), Decimal("52")),

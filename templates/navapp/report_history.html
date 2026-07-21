@@ -5,17 +5,28 @@
   <div>
     <p class="eyebrow">步驟 2</p>
     <h1>評論及產生報告</h1>
-    <p class="muted">每份報告各自保存基金經理評論。系統會自動取得美國財政部 10 年期利率、計算績效，並產生 Word 及 PDF。</p>
+    <p class="muted">選擇月報或季報及截止月份，輸入基金經理評論後產生 Word 及 PDF。系統會自動取得美國財政部 10 年期利率並計算績效。</p>
   </div>
-  <details class="advanced-page-actions"><summary>其他操作</summary><a href="{% url 'report-create' %}">建立空白報告</a></details>
 </div>
 
-<section class="report-list" aria-label="季度報告紀錄">
+<section class="panel report-period-selector" aria-labelledby="report-period-title">
+  <div class="section-heading"><div><h2 id="report-period-title">選擇報告期間</h2><p class="muted">月報可選任何已完成月份；季報請選 3、6、9 或 12 月。</p></div></div>
+  <form method="post" action="{% url 'report-create' %}" class="report-period-form">{% csrf_token %}
+    <div class="field">{{ period_form.share_class.label_tag }}{{ period_form.share_class }}{{ period_form.share_class.errors }}</div>
+    <div class="field">{{ period_form.report_type.label_tag }}{{ period_form.report_type }}{{ period_form.report_type.errors }}</div>
+    <div class="field">{{ period_form.year.label_tag }}{{ period_form.year }}{{ period_form.year.errors }}</div>
+    <div class="field">{{ period_form.month.label_tag }}{{ period_form.month }}{{ period_form.month.errors }}</div>
+    <button class="button primary" type="submit">選擇並填寫評論</button>
+    {{ period_form.non_field_errors }}
+  </form>
+</section>
+
+<section class="report-list" aria-label="報告紀錄">
   {% for report in reports %}
   <article id="report-{{ report.pk }}" class="panel report-card{% if report.pk|stringformat:'s' == selected_report %} selected-report{% endif %}">
     <header class="report-card-header">
       <div>
-        <p class="eyebrow">{{ report.year }} 年第 {{ report.quarter }} 季 · 版本 {{ report.version }}</p>
+        <p class="eyebrow">{{ report.period_label }}</p>
         <h2>{{ report.share_class }}</h2>
       </div>
       <span class="status {{ report.status|lower }}">{{ report.status|choice_label }}</span>
@@ -32,37 +43,29 @@
           <div class="field">
             {{ report.commentary_form.commentary_markdown.label_tag }}
             {{ report.commentary_form.commentary_markdown }}
-            <small>評論只屬於這份 {{ report.year }} 年第 {{ report.quarter }} 季報告；支援安全 Markdown 段落及清單。</small>
+            <small>評論只屬於這份{% if report.report_type == "MONTHLY" %}月報{% else %}季報{% endif %}；支援安全 Markdown 段落及清單。</small>
             {{ report.commentary_form.commentary_markdown.errors }}
           </div>
           <div class="report-actions">
             {% if report.simple_period_complete %}
-              <button class="button secondary" type="submit" name="action" value="save_commentary">{% if report.status == "READY" %}另存評論為新版本{% else %}僅儲存評論{% endif %}</button>
-              <button class="button primary" type="submit" name="action" value="generate">{% if report.status == "READY" %}建立新版本並重新產生{% else %}儲存評論並產生報告{% endif %}</button>
+              <button class="button secondary" type="submit" name="action" value="save_commentary">僅儲存評論</button>
+              <button class="button primary" type="submit" name="action" value="generate">儲存評論並產生報告</button>
             {% else %}
               <button class="button secondary" type="submit" name="action" value="save_commentary">儲存評論</button>
-              <span class="muted">等待本季 NAV 齊全後產生</span>
+              <span class="muted">等待所選期間 NAV 齊全後產生</span>
             {% endif %}
           </div>
         </form>
         {% else %}
           <div class="saved-commentary">{{ report.commentary_markdown|linebreaksbr }}</div>
-          <p class="muted">已定稿版本的評論不可修改。</p>
+          <p class="muted">已定稿報告的評論不可修改。</p>
         {% endif %}
       </section>
 
       <aside class="report-output">
         <h3>報告檔案</h3>
         <div class="file-actions">
-          {% if report.status == "READY" or report.status == "FINAL" or report.status == "STALE" %}
-            {% for file in report.files.all %}<a class="button secondary" href="{% url 'report-download' report.pk file.file_type %}">下載 {{ file.file_type|choice_label }}</a>{% empty %}<span class="muted">尚未產生</span>{% endfor %}
-          {% else %}
-            <span class="muted">尚未產生</span>
-          {% endif %}
-        </div>
-        <div class="report-secondary-links">
-          <a href="{% url 'simple-entry' report.share_class_id %}">輸入下一個 NAV 月份</a>
-          <details class="inline-advanced"><summary>進階</summary><div><a href="{% url 'nav-history' report.share_class_id %}">修正現有 NAV</a><a href="{% url 'report-review' report.pk %}">報告檢查</a></div></details>
+          {% for file in report.files.all %}<a class="button secondary" href="{% url 'report-download' report.pk file.file_type %}">下載 {{ file.file_type|choice_label }}</a>{% empty %}<span class="muted">尚未產生</span>{% endfor %}
         </div>
       </aside>
     </div>

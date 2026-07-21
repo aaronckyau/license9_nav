@@ -10,6 +10,7 @@
 
 ## 報酬
 
+- 月報所選期間回報：`report_month_NAV / previous_month_NAV - 1`；第一個月以 inception NAV 為基準。
 - Quarter：`quarter_end_NAV / preceding_quarter_end_NAV - 1`；第一個 partial quarter 以 inception NAV 為基準。
 - YTD：`latest_NAV / previous_December_NAV - 1`；第一年度以 inception NAV 為基準。
 - ITD：`latest_NAV / inception_NAV - 1`。
@@ -28,4 +29,4 @@
 
 由 `reference/xsq_nav_history.xlsx` 45 筆資料計算：Q1/YTD `-16.24%`、ITD `-22.72%`、legacy geometric annualized return `-6.64%`、annualized volatility `53.92%`、trailing 12-month volatility `78.04%`、positive/negative months `38%/62%`、dynamic maximum drawdown `-57.44%`、以 4.1908583333% RFR 計算 Sharpe `-0.201`。精確 raw Decimal 由 tests 比對，以上為報表顯示精度。
 
-每個 review metric 同時保存 raw value、display value、公式文字、formula version、data cutoff 與 warnings，final snapshot 可重現。
+每個 review metric 同時保存 raw value、display value、公式文字、formula version、data cutoff 與 warnings，final snapshot 可重現。月報與季報均使用 `legacy_excel_v1`；差異只在截止月份驗證、所選期間回報及報告回報表的呈現。

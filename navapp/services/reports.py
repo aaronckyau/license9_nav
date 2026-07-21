@@ -244,10 +244,14 @@ def build_current_snapshot(report: QuarterlyReport) -> dict[str, object]:
             "share_class_name": share_class.name,
             "share_class_code": share_class.code,
             "report_id": report.pk,
+            "report_type": report.report_type,
             "year": report.year,
             "quarter": report.quarter,
+            "report_month": report.report_month,
             "version": report.version,
             "report_date": report.report_date.isoformat(),
+            "period_label": report.period_label,
+            "period_label_en": report.period_label_en,
         },
         "fund": {
             "structure": fund.structure,
@@ -484,7 +488,7 @@ def _write_footer(paragraph, snapshot: dict[str, object]) -> None:
     )
     run = paragraph.add_run(
         f"{identity['fund_short_code']} | Report {identity['report_id']} | "
-        f"{identity['year']} Q{identity['quarter']} v{identity['version']} | "
+        f"{identity['period_label_en']} | "
         f"Generated {generated_at} | Page "
     )
     _set_run_font(run, size=8, color=RGBColor(100, 112, 125))
@@ -529,11 +533,11 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     document = Document()
     identity = snapshot["identity"]
     core = document.core_properties
-    core.title = (
-        f"{identity['fund_display_name']} - {identity['year']} "
-        f"Q{identity['quarter']} Quarterly Report"
+    core.title = f"{identity['fund_display_name']} - {identity['period_label_en']}"
+    core.subject = (
+        f"NAV {'monthly' if identity['report_type'] == 'MONTHLY' else 'quarterly'} report "
+        f"for {identity['share_class_name']}"
     )
-    core.subject = f"NAV quarterly report for {identity['share_class_name']}"
     core.author = "NAV Quarterly Reporting"
     core.keywords = (
         f"report_id={identity['report_id']}; version={identity['version']}; "
@@ -570,7 +574,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     subtitle = document.add_paragraph()
     subtitle.paragraph_format.space_after = Pt(4)
     subtitle.paragraph_format.keep_with_next = True
-    run = subtitle.add_run(f"{identity['year']} Q{identity['quarter']}")
+    run = subtitle.add_run(str(identity["period_label_en"]))
     _set_run_font(run, size=15, bold=True, color=RGBColor(55, 70, 85))
     for line in (fund["professional_statement"], fund["date_statement"]):
         paragraph = document.add_paragraph()
@@ -594,19 +598,35 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for strategy in fund["strategies"]:
         document.add_paragraph(str(strategy), style="List Bullet")
 
-    document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
-    matrix = snapshot["calculation"]["quarterly_matrix"]
-    performance = document.add_table(rows=1, cols=6)
-    performance.style = "Table Grid"
-    headers = ["Year", "Q1", "Q2", "Q3", "Q4", "YTD"]
-    for cell, label in zip(performance.rows[0].cells, headers, strict=True):
-        cell.text = label
-    for year, values in sorted(matrix.items()):
-        cells = performance.add_row().cells
-        row_values = [year] + [values[key]["display"] for key in ("q1", "q2", "q3", "q4", "ytd")]
-        for cell, value in zip(cells, row_values, strict=True):
-            cell.text = str(value)
-    _set_table_geometry(performance, [1120, 1748, 1748, 1748, 1748, 1752])
+    if identity["report_type"] == "MONTHLY":
+        document.add_heading("Fund Performance (Monthly Returns)", level=1)
+        performance = document.add_table(rows=1, cols=3)
+        performance.style = "Table Grid"
+        headers = ["Month", "NAV per Share", "Monthly Return"]
+        for cell, label in zip(performance.rows[0].cells, headers, strict=True):
+            cell.text = label
+        for item in snapshot["calculation"]["monthly"][-12:]:
+            cells = performance.add_row().cells
+            row_values = [item["valuation_month"][:7], item["nav"], item["return_display"]]
+            for cell, value in zip(cells, row_values, strict=True):
+                cell.text = str(value)
+        _set_table_geometry(performance, [2600, 3632, 3632])
+    else:
+        document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
+        matrix = snapshot["calculation"]["quarterly_matrix"]
+        performance = document.add_table(rows=1, cols=6)
+        performance.style = "Table Grid"
+        headers = ["Year", "Q1", "Q2", "Q3", "Q4", "YTD"]
+        for cell, label in zip(performance.rows[0].cells, headers, strict=True):
+            cell.text = label
+        for year, values in sorted(matrix.items()):
+            cells = performance.add_row().cells
+            row_values = [year] + [
+                values[key]["display"] for key in ("q1", "q2", "q3", "q4", "ytd")
+            ]
+            for cell, value in zip(cells, row_values, strict=True):
+                cell.text = str(value)
+        _set_table_geometry(performance, [1120, 1748, 1748, 1748, 1748, 1752])
     _repeat_header(performance.rows[0])
     _style_table_text(performance, "394B59")
     for cell in performance.rows[0].cells:
@@ -712,7 +732,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     provenance.add_run("Calculation and provenance: ").bold = True
     provenance.add_run(
         f"{snapshot['formula_version']} | Report ID {identity['report_id']} | "
-        f"Version {identity['version']} | Snapshot {snapshot['captured_at']}"
+        f"Snapshot {snapshot['captured_at']}"
         + (f" | RFR {rfr.get('provider')} / {rfr.get('series')}" if rfr else "")
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -728,7 +748,7 @@ def build_custom_docx(
     context = {
         "fund_name": snapshot["identity"]["fund_display_name"],
         "share_class": snapshot["identity"]["share_class_name"],
-        "report_quarter": f"{snapshot['identity']['year']} Q{snapshot['identity']['quarter']}",
+        "report_quarter": snapshot["identity"]["period_label_en"],
         "report_date": snapshot["identity"]["report_date"],
         "investment_objective": snapshot["fund"]["investment_objective"],
         "strategy_highlights": snapshot["fund"]["strategies"],
@@ -800,7 +820,7 @@ def _save_generated_file(report: QuarterlyReport, file_type: str, path: Path) ->
 
 def generate_report_files(report: QuarterlyReport, actor=None) -> list[GeneratedFile]:
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        raise ReportGenerationError("已定稿報告的檔案不可修改；請建立新版本。")
+        raise ReportGenerationError("已定稿報告的檔案不可修改。")
     try:
         snapshot = build_current_snapshot(report)
         report.snapshot = snapshot
@@ -809,9 +829,13 @@ def generate_report_files(report: QuarterlyReport, actor=None) -> list[Generated
         output_dir = Path(settings.MEDIA_ROOT) / "reports" / str(report.pk) / f"v{report.version}"
         output_dir.mkdir(parents=True, exist_ok=True)
         chart_path = output_dir / "nav-chart.png"
-        docx_path = output_dir / "quarterly-report.docx"
+        report_slug = "monthly-report" if report.report_type == "MONTHLY" else "quarterly-report"
+        docx_path = output_dir / f"{report_slug}.docx"
         generate_nav_chart(snapshot, chart_path)
-        if report.fund.custom_docx_template:
+        if (
+            report.fund.custom_docx_template
+            and report.report_type == QuarterlyReport.ReportType.QUARTERLY
+        ):
             build_custom_docx(
                 snapshot,
                 chart_path,

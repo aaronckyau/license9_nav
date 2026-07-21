@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load nav_tags %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">步驟 3</p><h1>績效檢視</h1><p class="muted">{{ report.share_class }} · {{ report.year }} 年第 {{ report.quarter }} 季 · 版本 {{ report.version }} · NAV 截止日期 {{ report.report_date|date:"Y 年 n 月 j 日" }}</p></div><span class="status {{ report.status|lower }}">{{ report.status|choice_label }}</span></div>
+<div class="page-heading"><div><p class="eyebrow">進階檢查</p><h1>績效檢視</h1><p class="muted">{{ report.share_class }} · {{ report.period_label }} · NAV 截止日期 {{ report.report_date|date:"Y 年 n 月 j 日" }}</p></div><span class="status {{ report.status|lower }}">{{ report.status|choice_label }}</span></div>
 {% if validation_issues %}<section class="error-summary"><h2>無法定稿的項目</h2><ul>{% for issue in validation_issues %}<li>{{ issue|zh_text }}</li>{% endfor %}</ul></section>{% endif %}
 {% if calculation %}
 <section class="metric-grid">{% for key, detail in calculation.details.items %}<article class="metric-card"><p>{{ key|metric_label }}</p><strong>{{ detail.display }}</strong><details><summary>計算詳情</summary><dl><dt>公式</dt><dd>{{ detail.formula|zh_text }}</dd><dt>版本</dt><dd>{{ detail.formula_version }}</dd><dt>原始值</dt><dd>{{ detail.raw|default:"不適用" }}</dd><dt>資料截止日</dt><dd>{{ detail.data_cutoff }}</dd></dl>{% if detail.warning %}<p class="warning-text">{{ detail.warning|zh_text }}</p>{% endif %}</details></article>{% endfor %}</section>

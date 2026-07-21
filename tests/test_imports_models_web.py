@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.urls import get_script_prefix, reverse, set_script_prefix
 
-from navapp.models import AuditLog, Fund, NAVRecord, QuarterlyReport, ShareClass
+from navapp.models import AuditLog, Fund, GeneratedFile, NAVRecord, QuarterlyReport, ShareClass
 from navapp.services import reports
 from navapp.services.calculations import CalculationValidationError
 from navapp.services.imports import ImportValidationError, parse_legacy_xsq, validate_sequence
@@ -129,6 +129,53 @@ def test_dynamic_user_interface_text_uses_traditional_chinese():
     assert zh_text("Report end must be a calendar quarter end.") == "報告截止日必須為日曆季度末日。"
     assert zh_date("2026-03-31") == "2026 年 3 月 31 日"
     assert zh_text("Fund settings changed: short_code") == "基金設定已變更： short_code"
+
+
+@pytest.mark.django_db
+def test_dashboard_uses_latest_report_month_within_same_quarter(client, django_user_model):
+    user = django_user_model.objects.create_user("latest-report-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Latest Report Fund LPF",
+        display_name="Latest Report Fund",
+        short_code="latest-report-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Latest report objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="latest-report-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        report_type=QuarterlyReport.ReportType.MONTHLY,
+        year=2024,
+        report_month=4,
+        quarter=2,
+        report_date=date(2024, 4, 30),
+        created_by=user,
+    )
+    latest = QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        report_type=QuarterlyReport.ReportType.MONTHLY,
+        year=2024,
+        report_month=5,
+        quarter=2,
+        report_date=date(2024, 5, 31),
+        created_by=user,
+    )
+
+    response = client.get(reverse("dashboard"))
+
+    assert response.status_code == 200
+    assert response.context["cards"][0]["latest_report"] == latest
 
 
 @pytest.mark.django_db
@@ -590,7 +637,99 @@ def test_simple_generate_refreshes_rfr_and_returns_to_report_history(
 
 
 @pytest.mark.django_db
-def test_ready_report_commentary_edit_creates_a_new_version(client, django_user_model):
+def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_model):
+    user = django_user_model.objects.create_user("period-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Period Fund LPF",
+        display_name="Period Fund",
+        short_code="period-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Period objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="period-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+
+    monthly = client.post(
+        reverse("report-create"),
+        {
+            "share_class": share.pk,
+            "report_type": "MONTHLY",
+            "year": "2024",
+            "month": "2",
+        },
+    )
+    assert monthly.status_code == 302
+    monthly_report = QuarterlyReport.objects.get(
+        share_class=share,
+        report_type="MONTHLY",
+        report_date=date(2024, 2, 29),
+    )
+    assert monthly_report.report_month == 2
+    assert monthly_report.quarter == 1
+    assert monthly.url == f"{reverse('report-history')}?report={monthly_report.pk}"
+
+    repeated_monthly = client.post(
+        reverse("report-create"),
+        {
+            "share_class": share.pk,
+            "report_type": "MONTHLY",
+            "year": "2024",
+            "month": "2",
+        },
+    )
+    assert repeated_monthly.status_code == 302
+    assert repeated_monthly.url == monthly.url
+    assert (
+        QuarterlyReport.objects.filter(
+            share_class=share,
+            report_type="MONTHLY",
+            report_date=date(2024, 2, 29),
+        ).count()
+        == 1
+    )
+
+    invalid_quarter = client.post(
+        reverse("report-create"),
+        {
+            "share_class": share.pk,
+            "report_type": "QUARTERLY",
+            "year": "2024",
+            "month": "2",
+        },
+    )
+    assert invalid_quarter.status_code == 200
+    assert "季報截止月份必須是 3、6、9 或 12 月" in invalid_quarter.content.decode()
+
+    quarterly = client.post(
+        reverse("report-create"),
+        {
+            "share_class": share.pk,
+            "report_type": "QUARTERLY",
+            "year": "2024",
+            "month": "3",
+        },
+    )
+    assert quarterly.status_code == 302
+    quarterly_report = QuarterlyReport.objects.get(
+        share_class=share,
+        report_type="QUARTERLY",
+        report_date=date(2024, 3, 31),
+    )
+    assert quarterly_report.report_month == 3
+    assert quarterly_report.quarter == 1
+    assert quarterly.url == f"{reverse('report-history')}?report={quarterly_report.pk}"
+
+
+@pytest.mark.django_db
+def test_ready_report_commentary_edit_reuses_single_current_report(client, django_user_model):
     user = django_user_model.objects.create_user("version-user", password="safe-password")
     client.force_login(user)
     fund = Fund.objects.create(
@@ -621,10 +760,17 @@ def test_ready_report_commentary_edit_creates_a_new_version(client, django_user_
         snapshot={"identity": {"report_id": 1}},
         created_by=user,
     )
+    GeneratedFile.objects.create(
+        report=original,
+        file_type=GeneratedFile.FileType.DOCX,
+        storage_path="reports/original/quarterly-report.docx",
+        sha256="b" * 64,
+        size=2048,
+    )
 
     history = client.get(f"{reverse('report-history')}?report={original.pk}")
-    assert "另存評論為新版本" in history.content.decode()
-    assert "建立新版本並重新產生" in history.content.decode()
+    assert "另存評論為新版本" not in history.content.decode()
+    assert "建立新版本並重新產生" not in history.content.decode()
 
     response = client.post(
         reverse("report-generate", args=[original.pk]),
@@ -637,16 +783,80 @@ def test_ready_report_commentary_edit_creates_a_new_version(client, django_user_
 
     assert response.status_code == 302
     original.refresh_from_db()
-    revised = QuarterlyReport.objects.get(share_class=share, version=2)
-    assert original.status == QuarterlyReport.Status.READY
-    assert original.commentary_markdown == "Original commentary"
-    assert original.snapshot == {"identity": {"report_id": 1}}
-    assert revised.status == QuarterlyReport.Status.DRAFT
-    assert revised.commentary_markdown == "Revised commentary"
-    assert response.url == f"{reverse('report-history')}?report={revised.pk}"
-    assert AuditLog.objects.filter(
-        entity_id=str(revised.pk), action="CREATE_VERSION_FROM_READY"
-    ).exists()
+    assert QuarterlyReport.objects.filter(share_class=share).count() == 1
+    assert original.status == QuarterlyReport.Status.DRAFT
+    assert original.commentary_markdown == "Revised commentary"
+    assert original.snapshot == {}
+    assert original.files.count() == 0
+    assert response.url == f"{reverse('report-history')}?report={original.pk}"
+    assert AuditLog.objects.filter(entity_id=str(original.pk), action="UPDATE_COMMENTARY").exists()
+
+
+@pytest.mark.django_db
+def test_report_history_shows_latest_period_once_and_hides_advanced_links(
+    client, django_user_model
+):
+    user = django_user_model.objects.create_user("simple-report-user", password="safe-password")
+    client.force_login(user)
+    fund = Fund.objects.create(
+        legal_name="Simple Report Fund LPF",
+        display_name="Simple Report Fund",
+        short_code="simple-report-fund",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Simple report objective",
+    )
+    share = ShareClass.objects.create(
+        fund=fund,
+        name="Class A",
+        code="simple-report-a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    older = QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        year=2024,
+        quarter=1,
+        version=1,
+        report_date=date(2024, 3, 31),
+        commentary_markdown="Older hidden commentary",
+        created_by=user,
+    )
+    current = QuarterlyReport.objects.create(
+        fund=fund,
+        share_class=share,
+        year=2024,
+        quarter=1,
+        version=2,
+        report_date=date(2024, 3, 31),
+        commentary_markdown="Current visible commentary",
+        created_by=user,
+    )
+    GeneratedFile.objects.create(
+        report=current,
+        file_type=GeneratedFile.FileType.DOCX,
+        storage_path="reports/current/quarterly-report.docx",
+        sha256="a" * 64,
+        size=1024,
+    )
+
+    response = client.get(f"{reverse('report-history')}?report={older.pk}")
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert content.count("Current visible commentary") == 1
+    assert "Older hidden commentary" not in content
+    assert "版本" not in content
+    assert reverse("nav-history", args=[share.pk]) not in content
+    assert reverse("report-review", args=[current.pk]) not in content
+    assert "輸入下一個 NAV 月份" not in content
+    assert "進階" not in content
+    assert reverse("report-download", args=[current.pk, "DOCX"]) in content
+    assert 'name="report_type"' in content
+    assert "月報" in content
+    assert "季報" in content
 
 
 @pytest.mark.django_db
@@ -727,7 +937,13 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
     assert duplicate_response.status_code == 200
     assert "已存在一筆有效 NAV 紀錄" in duplicate_response.content.decode()
     response = client.post(
-        reverse("report-create"), {"share_class": share.pk, "year": "2024", "quarter": "1"}
+        reverse("report-create"),
+        {
+            "share_class": share.pk,
+            "report_type": "QUARTERLY",
+            "year": "2024",
+            "month": "3",
+        },
     )
     assert response.status_code == 302
     report = QuarterlyReport.objects.get(share_class=share)

@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 {% load nav_tags %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">步驟 5</p><h1>HTML 報告預覽</h1><p class="muted">{{ report.year }} 年第 {{ report.quarter }} 季 · 版本 {{ report.version }}</p></div><a class="button primary" href="{% url 'report-review' report.pk %}#generate">產生報告</a></div>
+<div class="page-heading"><div><p class="eyebrow">預覽</p><h1>HTML 報告預覽</h1><p class="muted">{{ report.period_label }}</p></div><a class="button primary" href="{% url 'report-history' %}?report={{ report.pk }}#report-{{ report.pk }}">返回評論及產生報告</a></div>
 {% if error %}<section class="error-summary">{{ error|zh_text }}</section>{% elif snapshot %}<article class="report-preview panel">
-  <header><p>{{ snapshot.fund.professional_statement }}</p><h1>{{ snapshot.identity.fund_display_name }}</h1><h2>{{ snapshot.identity.year }} 年第 {{ snapshot.identity.quarter }} 季 · {{ snapshot.identity.share_class_name }}</h2><p>{{ snapshot.fund.date_statement }}</p></header>
+  <header><p>{{ snapshot.fund.professional_statement }}</p><h1>{{ snapshot.identity.fund_display_name }}</h1><h2>{{ snapshot.identity.period_label }} · {{ snapshot.identity.share_class_name }}</h2><p>{{ snapshot.fund.date_statement }}</p></header>
   <section><h2>投資目標</h2><p>{{ snapshot.fund.investment_objective }}</p></section>
   <section><h2>策略重點及特點</h2><ul>{% for item in snapshot.fund.strategies %}<li>{{ item }}</li>{% endfor %}</ul></section>
+  {% if report.report_type == "MONTHLY" %}
+  <section class="table-wrap"><h2>基金表現－每月淨回報</h2><table><thead><tr><th>月份</th><th>每股 NAV</th><th>每月回報</th></tr></thead><tbody>{% for row in snapshot.calculation.monthly %}<tr><td>{{ row.valuation_month }}</td><td>{{ row.nav }}</td><td>{{ row.return_display }}</td></tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
+  {% else %}
   <section class="table-wrap quarterly-table"><h2>基金表現－季度淨回報</h2><table><thead><tr><th>年度</th><th>第一季</th><th>第二季</th><th>第三季</th><th>第四季</th><th>年初至今</th></tr></thead><tbody>{% for year, row in snapshot.calculation.quarterly_matrix.items %}<tr><th>{{ year }}</th>{% for key, value in row.items %}<td>{{ value.display }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
+  {% endif %}
   <section><h2>每股 NAV</h2><img class="report-chart" src="{% url 'report-chart' report.pk %}" alt="每股 NAV 圖表"></section>
   <section><h2>基金統計數據</h2><div class="metric-grid">{% for key, value in snapshot.calculation.metrics_display.items %}<div class="metric-card"><p>{{ key|metric_label }}</p><strong>{{ value }}</strong></div>{% endfor %}</div></section>
   <section><h2>基金經理評論</h2>{{ commentary_html }}</section>

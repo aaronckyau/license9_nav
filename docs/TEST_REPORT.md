@@ -1,6 +1,6 @@
 # Test Report
 
-日期：2026-07-20；環境：Windows Python 3.12/SQLite/Edge headless/Word COM 唯讀 QA，加上 Contabo Ubuntu/PostgreSQL 17/Docker/LibreOffice production smoke。
+日期：2026-07-21；環境：Windows Python 3.12/SQLite/in-app browser/Word DOCX 結構 QA，加上既有 Contabo Ubuntu/PostgreSQL 17/Docker/LibreOffice production smoke。
 
 ## 自動化結果
 
@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 44 passed, 1 skipped
+pytest -q                                         PASS: 50 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -44,6 +44,8 @@ Public /nav login/logout/static/health/readiness PASS
 | finalized immutability/staleness | PASS | model/service/web lifecycle tests |
 
 ## Browser visual QA
+
+2026-07-21 月報／季報選擇器增量以真實瀏覽器操作驗證：成功建立 XSQ 2026 年 6 月月報、儲存評論並執行官方 RFR／計算／DOCX 路徑；`TREASURY_CMT10 / BC_10YEAR` 保存 12 筆截至 2026-06-30 的觀察值。1440×1000、1024×900、390×844 均無水平溢出或 console error，截圖為 `artifacts/visual-qa/report-history-{desktop-1440,tablet-1024,mobile-390}.png`。頁面不再顯示版本、「輸入下一個 NAV 月份」、「進階」、「修正現有 NAV」或「報告檢查」。本機 PDF 因沒有 LibreOffice 按預期失敗，但已產生的 Word 仍可下載；DOCX audit 位於 `artifacts/visual-qa/monthly-report-docx-audit.json`，結果 valid、2 embedded media、0 external relationship、0 embedded spreadsheet、0 fixed row height。
 
 `scripts/visual_qa.cjs` 以 Edge 執行 1440×1000、1024×900、390×844。結果：36 screenshots、30 inspections、0 horizontal overflow、0 escaped controls、0 console error、0 page error。JSON：`artifacts/visual-qa/visual-qa-results.json`；三張 contact sheets 與全部頁面截圖同目錄。
 

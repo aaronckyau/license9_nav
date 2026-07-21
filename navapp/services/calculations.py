@@ -207,8 +207,13 @@ def calculate_performance(
     annual_rfr_decimal: Decimal | None = None,
     percentage_places: int = 2,
     sharpe_places: int = 3,
+    report_type: str = "QUARTERLY",
 ) -> dict[str, object]:
-    if report_end != month_end(report_end) or report_end.month not in {3, 6, 9, 12}:
+    if report_type not in {"MONTHLY", "QUARTERLY"}:
+        raise CalculationValidationError(["不支援的報告類型。"])
+    if report_end != month_end(report_end):
+        raise CalculationValidationError(["報告截止日必須為日曆月底。"])
+    if report_type == "QUARTERLY" and report_end.month not in {3, 6, 9, 12}:
         raise CalculationValidationError(["報告截止日必須為日曆季度末日。"])
     inception_nav = _decimal(inception_nav)
     annual_rfr_decimal = _decimal(annual_rfr_decimal) if annual_rfr_decimal is not None else None
@@ -216,7 +221,12 @@ def calculate_performance(
     returns = monthly_returns(ordered, inception_nav)
     latest = ordered[-1]
     matrix = quarterly_matrix(ordered, inception_nav, report_end)
-    latest_quarter = matrix[str(report_end.year)][f"q{report_end.month // 3}"]
+    latest_quarter = (
+        matrix[str(report_end.year)][f"q{report_end.month // 3}"]
+        if report_type == "QUARTERLY"
+        else None
+    )
+    latest_period = latest_quarter if report_type == "QUARTERLY" else returns[-1]
     ytd = matrix[str(report_end.year)]["ytd"]
     itd = latest.nav / inception_nav - 1
     growth = reduce(mul, (Decimal(1) + value for value in returns), Decimal(1))
@@ -242,7 +252,6 @@ def calculate_performance(
     cagr = day_based_cagr(latest.nav, inception_nav, (report_end - inception_date).days)
 
     metrics = {
-        "latest_quarter_return": latest_quarter,
         "ytd_return": ytd,
         "itd_return": itd,
         "annualized_return": annualized_return,
@@ -258,6 +267,10 @@ def calculate_performance(
         "sharpe_ratio": sharpe,
         "day_based_cagr": cagr,
     }
+    if report_type == "QUARTERLY":
+        metrics = {"latest_quarter_return": latest_quarter, **metrics}
+    else:
+        metrics = {"latest_period_return": latest_period, **metrics}
     displays = {
         key: (
             format_decimal(value, sharpe_places)
@@ -272,14 +285,6 @@ def calculate_performance(
         for key, value in metrics.items()
     }
     details = {
-        "latest_quarter_return": _detail(
-            "Latest quarter return",
-            "Quarter-end NAV / previous quarter-end NAV - 1",
-            latest_quarter,
-            displays["latest_quarter_return"],
-            {"report_end": report_end, "latest_nav": latest.nav},
-            report_end,
-        ),
         "ytd_return": _detail(
             "YTD return",
             "Latest NAV / previous year-end NAV - 1",
@@ -343,6 +348,30 @@ def calculate_performance(
             warning=("Legacy workbook method; this is not a monthly excess-return Sharpe ratio."),
         ),
     }
+    if report_type == "QUARTERLY":
+        details = {
+            "latest_quarter_return": _detail(
+                "Latest quarter return",
+                "Quarter-end NAV / previous quarter-end NAV - 1",
+                latest_quarter,
+                displays["latest_quarter_return"],
+                {"report_end": report_end, "latest_nav": latest.nav},
+                report_end,
+            ),
+            **details,
+        }
+    else:
+        details = {
+            "latest_period_return": _detail(
+                "Latest month return",
+                "NAV[t] / NAV[t-1] - 1",
+                latest_period,
+                displays["latest_period_return"],
+                {"report_end": report_end, "latest_nav": latest.nav},
+                report_end,
+            ),
+            **details,
+        }
 
     monthly = [
         {
@@ -366,6 +395,7 @@ def calculate_performance(
         for year, row in matrix.items()
     }
     return {
+        "report_type": report_type,
         "formula_version": FORMULA_VERSION,
         "report_end": report_end.isoformat(),
         "source_nav_version": ":".join(str(point.revision) for point in ordered),
@@ -405,4 +435,5 @@ def calculate_for_report(report) -> dict[str, object]:
         annual_rfr_decimal=rfr_value,
         percentage_places=int(resolved["percentage_decimal_places"]),
         sharpe_places=int(resolved["sharpe_decimal_places"]),
+        report_type=getattr(report, "report_type", "QUARTERLY"),
     )

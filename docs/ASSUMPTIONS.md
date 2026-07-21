@@ -1,6 +1,6 @@
 # MVP Assumptions
 
-最後更新：2026-07-20
+最後更新：2026-07-21
 
 1. 一般使用者網站與工程／操作文件使用繁體中文；基金名稱、代碼、幣別、公式 ID、官方資料來源、稽核 JSON 欄位及使用者輸入的報告內容保留原文。對外 DOCX/PDF 的語言仍依基金報告內容及 `report_language` 設定，不由網站介面語言自動改寫。現階段為完整繁中單語介面；若日後重新啟用英文切換，須補齊 Django message catalog。
 2. Organization defaults 存於 singleton；fund 可明確覆寫。報表生成時把 resolved 值寫入 immutable snapshot。
@@ -21,11 +21,13 @@
 17. Production 啟用一年 HSTS，但暫不啟用 `includeSubDomains` 或 `preload`，因為兩者影響同網域其他服務，須先做全域 TLS inventory；因此 `check --deploy` 保留 W005/W021 兩項已知警告。
 18. 三步流程以「系統日期所屬月份之前，最近已完整結束的月份」作為可輸入上限；若系統日期正好是月末，則包含該月。以本次系統日期 2026-07-20 計算，上限為 2026 年 6 月。
 19. 一般 NAV 頁按年份顯示既有月份，且只開放自成立月份起最早缺少的一個月份；系統以該月月末作為正式 valuation month/date，避免跳月及重複。實際估值日不同、Indicative 狀態、歷史補匯或資料修正仍使用進階 NAV 表單。
-20. 簡化 NAV 頁每次只儲存一筆正式 NAV，並建立或重用所屬季度的 draft report；基金經理評論不再附著於 NAV，而是在報告頁按 report/version 獨立輸入。非季末月份儲存後繼續顯示下一個缺月；季末月份前往評論及產生報告。季度資料未齊時，產生動作會先列出缺月，且不使用假資料補足。
+20. 簡化 NAV 頁每次只儲存一筆正式 NAV；基金經理評論不再附著於 NAV，而是在報告頁按報告期間獨立輸入。報告月份資料未齊時，產生動作會列出缺月，且不使用假資料補足。
 21. 使用者提供的 `X Squared Capital Management LPF Quarterly Newsletter 2026Q1_draft_pending commentary.docx` 與 repository 內參考 DOCX 雜湊相同，作為報告結構及視覺設計依據。內建產生器重建相同章節層次並嵌入原生圖表圖片，不複製來源檔的外部 Excel 關聯。
 22. 三步流程的官方 RFR 是自動模式：organization 選 FRED 但未設定 optional `FRED_API_KEY` 時，系統改用不需 key 的 U.S. Treasury 10-year 官方資料。操作者明確指定 FRED 時不 fallback，仍要求 key。
 23. yfinance 的 `^TNX` 可作參考性 10 年期利率資料，但 yfinance 明示其未獲 Yahoo 認可且資料介面只供個人／研究用途，因此不作權威報告來源。Production 繼續使用 U.S. Treasury 官方 `BC_10YEAR`，FRED `DGS10` 為可選官方來源。
-24. `READY` 報告已具有可下載產物；若在報告頁修改評論，系統建立下一個 draft version，再保存或產生，不會覆寫舊 version 的評論、snapshot 或檔案。`DRAFT`／`GENERATION_FAILED` 尚未形成可交付版本，可在原 version 繼續編輯。
+24. 一般使用者每個股份類別、報告類型及截止月份只看到一份現行報告。`DRAFT`、`READY` 或 `GENERATION_FAILED` 報告再次儲存／產生時沿用同一筆紀錄並更新輸出，不建立使用者可見版本；`FINAL`／`STALE` 維持不可修改。資料庫的 `version` 欄只保留供既有資料、稽核及定稿重現，不在一般流程顯示。
 25. 年度 NAV 儀表板的首月回報優先使用上一年度 12 月 NAV 作基準。若無該筆資料，改以當年度首筆 NAV 作期間基準，頁面明確提示此 fallback，且首筆月回報及累積回報顯示「—」，不製造 0% 回報。這項規則只用於 NAV 輸入頁的展示分析，不改變 `legacy_excel_v1` 報告計算。
 26. 年度 NAV 圖表只在視覺繪製時把 `Decimal` 轉為浮點座標；所有表格數值、月回報、期間回報、最高及最低 NAV 均由後端以 `Decimal` 計算，並只在展示時四捨五入。
 27. 若進階匯入或資料修正造成兩筆 NAV 之間缺月，年度儀表板不把跨月變動標示為單月回報，而顯示「—」；累積回報仍可相對已揭露的年度基準顯示。最早缺少月份會依月份順序插入待輸入列。
+28. 月報可選任何已完成月份，截止日為該月月末，期間回報為該月 NAV 除以上月 NAV 減一；季報只可選 3、6、9、12 月，既有季度表及 `legacy_excel_v1` 邏輯不變。月報 DOCX 顯示最近最多 12 個月的 NAV 及月回報。
+29. 現有自訂 DOCX 範本契約只定義 `quarterly_rows`，因此只套用於季報；月報一律使用已驗證的內建月報版面，避免把季度欄誤當月度資料。首頁同截止日有多份報告時，以最近更新者作為繼續操作入口。

@@ -2,7 +2,7 @@
 
 ## 交付摘要
 
-MVP 已推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機應用程式、計算、匯入、RFR、瀏覽器及產物檢查，以及 VPS production Docker／LibreOffice／公開端點 smoke test。最新 production 把正常月結收斂為「選擇基金 → 按年份輸入下一個缺少月份的 NAV → 在指定報告輸入評論並產生報告」；設定、績效、人工 RFR、預覽及定稿保留為進階控制。Django Admin 只供受信任的資料修正人員使用。
+MVP 已推送 GitHub 並部署至 `https://www.4mstrategy.com/nav/`，通過本機應用程式、計算、匯入、RFR、瀏覽器及產物檢查，以及 VPS production Docker／LibreOffice／公開端點 smoke test。正常流程為「選擇基金 → 按年份輸入 NAV → 選擇月報或季報、輸入評論並產生報告」；一般報告頁按期間只顯示一份現行報告，不顯示版本或進階入口。Django Admin 只供受信任的資料修正人員使用。
 
 ## Runtime 與入口
 
@@ -63,15 +63,15 @@ DB/media 必須同一 timestamp 並做 off-site encrypted copy；還原後核對
 - 不要把 Excel cell references 寫入 service；maximum drawdown 必須 running peak。
 - 不要讓 RFR observation 超過 report end。
 - 不要公開 `/media/`，也不要把 external Excel relationships 放入 DOCX。
-- FINAL/STALE report 不可改；來源更正後建立新 version。
+- FINAL/STALE report 不可改；內部版本及快照仍保留供稽核重現，一般使用者不管理版本。
 
 ## 驗證與 artifacts
 
-全套結果：41 passed、1 local-LibreOffice skip；Ruff/Django/migrations PASS；最新 deployed commit 的 Compose/VPS image、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面 PASS。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；四頁與長評論六頁 render 在 `artifacts/report-render/`；本輪新增 8 張三視窗 NAV／報告評論 QA 截圖於 `artifacts/visual-qa-zh/`。
+全套結果：50 passed、1 local-LibreOffice skip；Ruff/Django/migrations PASS；Compose/VPS image、三個 healthy containers、LibreOffice report smoke、公開登入及三步頁面均納入發布驗證。XSQ DOCX/PDF 在 `artifacts/sample-reports/`；VPS copies 在 Docker media volume 的 `/app/media/reports/1/v1/`；月報／季報選擇器三視窗截圖及 DOCX audit 位於 `artifacts/visual-qa/`。
 
 ## Production 狀態
 
 - GitHub：`https://github.com/aaronckyau/license9_nav`，branch `main`。
-- VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；三步流程、年度 NAV 摘要／折線圖／回報表、響應式月份卡片、報告頁評論 UX，以及既有 NAV 查看／編輯均已於 2026-07-20 完成部署，最新功能 commit 為 `ef04eef`。
+- VPS：`/root/apps/license9_nav`；public `https://www.4mstrategy.com/nav/`；三步流程、年度 NAV 摘要／折線圖／回報表、月報／季報選擇器、單一現行報告及既有 NAV 查看／編輯均由 `main` 發布；確切版本以 `git rev-parse HEAD` 為準。
 - Nginx 設定更新前備份：`/etc/nginx/sites-available/4mstrategy.com.bak.20260720T020446Z.nav-deploy`。
 - 後續操作重點是首次登入更改管理員密碼、安排加密 off-site backup 及定期 restore drill；不需再改 MVP 架構。

@@ -26,12 +26,13 @@ flowchart LR
 
 ## 不變條件
 
-- report 唯一鍵為 share class + year + quarter + version，fund 必須與 share class 一致。
+- report 唯一鍵為 share class + report type + report date + internal version，fund 必須與 share class 一致；一般介面按期間只呈現最新一筆。
 - 每個 share class/month 只有一筆 active NAV；月份必須 month-end。
 - FINAL/STALE report 本體不可修改或重新生成；更新 reportable source 只會把 FINAL 轉為 STALE。
 - RFR 不得使用 report end 後資料；官方 snapshot 恰好 12 個連續月末值。
 - `GeneratedFile.storage_path` 解析後必須位於 `MEDIA_ROOT`，下載只經登入 view。
 - DOCX 先保存/稽核，PDF 轉換失敗仍保留可診斷 DOCX 與 `GENERATION_FAILED`。
+- 現有自訂 DOCX 範本契約為季報專用；月報使用內建月度回報版面。
 
 ## 延伸邊界
 

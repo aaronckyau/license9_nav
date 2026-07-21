@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, connections, transaction
-from django.db.models import Max, Prefetch
+from django.db.models import Prefetch
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -101,7 +101,9 @@ def dashboard(request):
         latest_nav = (
             share_class.nav_records.filter(is_active=True).order_by("-valuation_month").first()
         )
-        latest_report = share_class.reports.order_by("-year", "-quarter", "-version").first()
+        latest_report = share_class.reports.order_by(
+            "-report_date", "-updated_at", "-version"
+        ).first()
         cards.append(
             {
                 "share_class": share_class,
@@ -248,6 +250,7 @@ def _draft_report_for_period(
     latest = (
         QuarterlyReport.objects.filter(
             share_class=share_class,
+            report_type=QuarterlyReport.ReportType.QUARTERLY,
             year=year,
             quarter=quarter,
         )
@@ -264,7 +267,9 @@ def _draft_report_for_period(
     report = QuarterlyReport(
         fund=share_class.fund,
         share_class=share_class,
+        report_type=QuarterlyReport.ReportType.QUARTERLY,
         year=year,
+        report_month=quarter * 3,
         quarter=quarter,
         version=version,
         report_date=report_date,
@@ -537,21 +542,29 @@ def report_create(request):
         if form.is_valid():
             share_class = form.cleaned_data["share_class"]
             year = form.cleaned_data["year"]
-            quarter = form.cleaned_data["quarter"]
-            version = (
+            report_type = form.cleaned_data["report_type"]
+            report_date = form.cleaned_data["report_date"]
+            existing = (
                 QuarterlyReport.objects.filter(
-                    share_class=share_class, year=year, quarter=quarter
-                ).aggregate(Max("version"))["version__max"]
-                or 0
-            ) + 1
+                    share_class=share_class,
+                    report_type=report_type,
+                    report_date=report_date,
+                )
+                .order_by("-version")
+                .first()
+            )
+            if existing:
+                return redirect(f"{reverse('report-history')}?report={existing.pk}")
             report = QuarterlyReport(
                 fund=share_class.fund,
                 share_class=share_class,
+                report_type=report_type,
                 year=year,
-                quarter=quarter,
-                version=version,
-                report_date=form.cleaned_data["report_date"],
-                commentary_date=form.cleaned_data["report_date"],
+                report_month=form.cleaned_data["month"],
+                quarter=form.cleaned_data["quarter"],
+                version=1,
+                report_date=report_date,
+                commentary_date=report_date,
                 created_by=request.user,
             )
             portfolio_manager = share_class.fund.parties.filter(
@@ -561,10 +574,11 @@ def report_create(request):
                 report.commentary_author = portfolio_manager.value
             report.full_clean()
             report.save()
-            return redirect("report-review", pk=report.pk)
+            return redirect(f"{reverse('report-history')}?report={report.pk}")
+        return _render_report_history(request, report_create_form=form)
     else:
         form = ReportCreateForm()
-    return render(request, "navapp/generic_form.html", {"form": form, "title": "建立季度報告"})
+    return render(request, "navapp/generic_form.html", {"form": form, "title": "選擇報告期間"})
 
 
 def _report_snapshot_for_display(report: QuarterlyReport) -> dict[str, object]:
@@ -675,7 +689,7 @@ def report_manual_rfr(request, pk):
 def report_commentary(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-        messages.error(request, "已定稿報告的評論不可修改；請建立新版本。")
+        messages.error(request, "已定稿報告的評論不可修改。")
         return redirect("report-review", pk=pk)
     if request.method == "POST":
         form = CommentaryForm(request.POST, instance=report)
@@ -733,10 +747,24 @@ def report_chart(request, pk):
 def _report_history_context(
     selected_report: str = "",
     bound_commentary_form: ReportHistoryCommentaryForm | None = None,
+    report_create_form: ReportCreateForm | None = None,
 ) -> dict[str, object]:
-    reports = list(
+    all_reports = list(
         QuarterlyReport.objects.select_related("fund", "share_class").prefetch_related("files")
     )
+    selected_item = (
+        next((item for item in all_reports if item.pk == int(selected_report)), None)
+        if selected_report.isdigit()
+        else None
+    )
+    reports = []
+    seen_periods = set()
+    for item in all_reports:
+        period_key = (item.share_class_id, item.report_type, item.report_date)
+        if period_key in seen_periods:
+            continue
+        seen_periods.add(period_key)
+        reports.append(item)
     completed_month = latest_completed_month()
     for item in reports:
         item.simple_period_complete = item.report_date <= completed_month
@@ -748,15 +776,35 @@ def _report_history_context(
                     instance=item,
                     auto_id=f"id_report_{item.pk}_%s",
                 )
-    active_report = (
-        next((item for item in reports if item.pk == int(selected_report)), None)
-        if selected_report.isdigit()
-        else None
-    )
+    if selected_item:
+        selected_key = (
+            selected_item.share_class_id,
+            selected_item.report_type,
+            selected_item.report_date,
+        )
+        active_report = next(
+            (
+                item
+                for item in reports
+                if (item.share_class_id, item.report_type, item.report_date) == selected_key
+            ),
+            None,
+        )
+    else:
+        active_report = reports[0] if reports else None
+    period_initial = {}
+    if active_report:
+        period_initial = {
+            "share_class": active_report.share_class_id,
+            "report_type": active_report.report_type,
+            "year": active_report.year,
+            "month": active_report.report_month,
+        }
     return {
         "reports": reports,
-        "selected_report": selected_report,
+        "selected_report": str(active_report.pk) if active_report else "",
         "report": active_report,
+        "period_form": report_create_form or ReportCreateForm(initial=period_initial),
     }
 
 
@@ -764,44 +812,13 @@ def _render_report_history(
     request,
     selected_report: str = "",
     bound_commentary_form: ReportHistoryCommentaryForm | None = None,
+    report_create_form: ReportCreateForm | None = None,
 ):
     return render(
         request,
         "navapp/report_history.html",
-        _report_history_context(selected_report, bound_commentary_form),
+        _report_history_context(selected_report, bound_commentary_form, report_create_form),
     )
-
-
-def _new_report_version_from_ready(
-    source: QuarterlyReport,
-    commentary_markdown: str,
-    user,
-) -> QuarterlyReport:
-    next_version = (
-        QuarterlyReport.objects.filter(
-            share_class=source.share_class,
-            year=source.year,
-            quarter=source.quarter,
-        ).aggregate(Max("version"))["version__max"]
-        or 0
-    ) + 1
-    report = QuarterlyReport(
-        fund=source.fund,
-        share_class=source.share_class,
-        year=source.year,
-        quarter=source.quarter,
-        version=next_version,
-        report_date=source.report_date,
-        commentary_title=source.commentary_title,
-        commentary_markdown=commentary_markdown,
-        commentary_author=source.commentary_author,
-        commentary_date=source.commentary_date or source.report_date,
-        formula_version=source.formula_version,
-        created_by=user,
-    )
-    report.full_clean()
-    report.save()
-    return report
 
 
 @login_required
@@ -810,7 +827,7 @@ def report_generate(request, pk):
     report = get_object_or_404(QuarterlyReport, pk=pk)
     if request.POST.get("inline_commentary") == "1":
         if report.status in {QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE}:
-            messages.error(request, "已定稿報告的評論不可修改；請建立新版本。")
+            messages.error(request, "已定稿報告的評論不可修改。")
             return redirect(f"{reverse('report-history')}?report={report.pk}")
         commentary_form = ReportHistoryCommentaryForm(
             request.POST,
@@ -819,42 +836,30 @@ def report_generate(request, pk):
         )
         if not commentary_form.is_valid():
             return _render_report_history(request, str(report.pk), commentary_form)
-        source_report = report
-        before_commentary = source_report.commentary_markdown
-        created_version = False
+        before_commentary = report.commentary_markdown
         with transaction.atomic():
-            if source_report.status == QuarterlyReport.Status.READY:
-                report = _new_report_version_from_ready(
-                    source_report,
-                    commentary_form.cleaned_data["commentary_markdown"],
-                    request.user,
-                )
-                created_version = True
-            else:
-                report = commentary_form.save(commit=False)
+            report = commentary_form.save(commit=False)
             if not report.commentary_author:
                 report.commentary_author = _portfolio_manager_name(report.share_class)
             if not report.commentary_date:
                 report.commentary_date = report.report_date
             report.snapshot = {}
             report.generation_error = ""
-            if request.POST.get("action") == "save_commentary":
-                report.status = QuarterlyReport.Status.DRAFT
+            report.status = QuarterlyReport.Status.DRAFT
             report.save()
+            report.files.all().delete()
             AuditLog.objects.create(
                 actor=request.user,
                 entity_type="QuarterlyReport",
                 entity_id=str(report.pk),
-                action="CREATE_VERSION_FROM_READY" if created_version else "UPDATE_COMMENTARY",
+                action="UPDATE_COMMENTARY",
                 before_json={"commentary_markdown": before_commentary},
                 after_json={
                     "commentary_markdown": report.commentary_markdown,
-                    "source_report_id": source_report.pk,
-                    "version": report.version,
                 },
             )
         if request.POST.get("action") == "save_commentary":
-            messages.success(request, "基金經理評論已儲存；本季 NAV 齊全後即可產生報告。")
+            messages.success(request, "基金經理評論已儲存；所選期間 NAV 齊全後即可產生報告。")
             return redirect(f"{reverse('report-history')}?report={report.pk}")
     try:
         calculate_for_report(report)

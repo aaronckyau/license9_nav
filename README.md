@@ -1,6 +1,6 @@
-# NAV Quarterly Report App
+# NAV Monthly and Quarterly Report App
 
-內部多基金 NAV 季報系統。基金完成設定後，一般使用者只需依「選擇基金 → 輸入下一個缺少月份的每股 NAV → 輸入該報告的基金經理評論並產生報告」三步完成月結；系統自動取得 RFR、執行 `legacy_excel_v1` 計算並產生有版本的 DOCX/PDF。基金設定、績效檢查、手動 RFR、預覽及定稿仍保留在進階頁面；Django Admin 僅供受信任的系統管理與資料修正。
+內部多基金 NAV 月報／季報系統。基金完成設定後，一般使用者只需依「選擇基金 → 輸入每股 NAV → 選擇月報或季報、輸入基金經理評論並產生報告」三步完成工作；系統自動取得 RFR、執行 `legacy_excel_v1` 計算並產生 DOCX/PDF。一般報告頁每個期間只顯示一份現行報告；Django Admin 僅供受信任的系統管理與資料修正。
 
 ## 本機啟動（Windows PowerShell）
 

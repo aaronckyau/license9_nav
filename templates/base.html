@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}NAV 季度報告系統{% endblock %}</title>
+  <title>{% block title %}NAV 報告系統{% endblock %}</title>
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
@@ -13,7 +13,7 @@
   <header class="site-header">
     <a class="brand" href="{% url 'dashboard' %}">
       <span class="brand-mark">NAV</span>
-      <span><small>季度報告系統</small><strong>{{ organization_settings.display_name|default:"基金報告"|choice_label }}</strong></span>
+      <span><small>月度及季度報告系統</small><strong>{{ organization_settings.display_name|default:"基金報告"|choice_label }}</strong></span>
     </a>
     {% if user.is_authenticated %}
       <nav aria-label="主要導覽">
@@ -21,10 +21,6 @@
         <a href="{% url 'report-history' %}">報告紀錄</a>
       </nav>
       <div class="account-menu">
-        <details class="advanced-menu">
-          <summary>進階</summary>
-          <div><a href="{% url 'fund-list' %}">基金設定</a><a href="{% url 'audit-log' %}">稽核紀錄</a><a href="{% url 'organization-settings' %}">系統設定</a></div>
-        </details>
         <a href="{% url 'password_change' %}">{{ user.get_username }}</a>
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">登出</button></form>
       </div>
