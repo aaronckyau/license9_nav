@@ -231,18 +231,28 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert "估值月份不得晚於最近已完成月份" in future.content.decode()
     assert not NAVRecord.objects.filter(share_class=share).exists()
 
+    excess_precision = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "valuation_month": "2024-03-31",
+            "nav_per_share": "105.123",
+        },
+    )
+    assert excess_precision.status_code == 200
+    assert not NAVRecord.objects.filter(share_class=share).exists()
+
     response = client.post(
         reverse("simple-entry", args=[share.pk]),
         {
             "valuation_month": "2024-03-31",
-            "nav_per_share": "105.123456",
+            "nav_per_share": "105.12",
         },
     )
     assert response.status_code == 302
     nav = NAVRecord.objects.get(share_class=share)
     assert nav.valuation_month == date(2024, 3, 31)
     assert nav.valuation_date == date(2024, 3, 31)
-    assert nav.nav_per_share == Decimal("105.123456")
+    assert nav.nav_per_share == Decimal("105.12")
     report = QuarterlyReport.objects.get(share_class=share)
     assert report.year == 2024
     assert report.quarter == 1
@@ -379,10 +389,70 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
     assert "2025" in content
     for record in records:
         assert f"{record.valuation_month.month} 月" in content
-        assert reverse("nav-edit", args=[share.pk, record.pk]) in content
-    assert "40.000000" in content
-    assert "69.000000" in content
-    assert "75.000000" in content
+        assert reverse("nav-edit", args=[share.pk, record.pk]) not in content
+    assert 'value="40.00"' in content
+    assert 'value="69.00"' in content
+    assert 'value="75.00"' in content
+    assert "修改原因" not in content
+    assert "估值日期" not in content
+    assert "修正 NAV 歷史紀錄" not in content
+
+    record = records[1]
+    response = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "action": "update_nav",
+            "record_id": record.pk,
+            "nav_per_share": "70.25",
+            "confirm_large_change": "1",
+        },
+    )
+    assert response.status_code == 302
+    assert response.url == reverse("simple-entry", args=[share.pk])
+    record.refresh_from_db()
+    assert record.nav_per_share == Decimal("70.25")
+    assert record.valuation_month == date(2025, 2, 28)
+    assert record.valuation_date == date(2025, 2, 28)
+    assert record.status == NAVRecord.Status.OFFICIAL
+    assert record.revision == 2
+    audit = AuditLog.objects.get(
+        entity_type="NAVRecord",
+        entity_id=str(record.pk),
+        action="UPDATE",
+    )
+    assert audit.reason == "由年度 NAV 表直接修改。"
+
+    no_change = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "action": "update_nav",
+            "record_id": record.pk,
+            "nav_per_share": "70.25",
+        },
+    )
+    assert no_change.status_code == 302
+    record.refresh_from_db()
+    assert record.revision == 2
+    assert (
+        AuditLog.objects.filter(
+            entity_type="NAVRecord",
+            entity_id=str(record.pk),
+            action="UPDATE",
+        ).count()
+        == 1
+    )
+
+    invalid_precision = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "action": "update_nav",
+            "record_id": record.pk,
+            "nav_per_share": "70.251",
+        },
+    )
+    assert invalid_precision.status_code == 200
+    record.refresh_from_db()
+    assert record.nav_per_share == Decimal("70.25")
 
 
 @pytest.mark.django_db
@@ -445,11 +515,11 @@ def test_nav_dashboard_renders_yearly_metrics_returns_charts_and_all_months(
     assert "nav-return-negative" in content
     assert 'data-year="2025"' in content
     assert content.count('data-year="2025" data-month-row') == 12
-    assert "99.000000" in content
+    assert 'value="99.00"' in content
     assert reverse("nav-year-chart", args=[share.pk, 2025]) in content
     assert reverse("nav-year-chart", args=[share.pk, 2026]) in content
     for record in records:
-        assert reverse("nav-edit", args=[share.pk, record.pk]) in content
+        assert reverse("nav-edit", args=[share.pk, record.pk]) not in content
 
 
 @pytest.mark.django_db
@@ -506,7 +576,7 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
 
 
 @pytest.mark.django_db
-def test_nav_year_chart_and_existing_edit_form_remain_authenticated(client, django_user_model):
+def test_nav_year_chart_and_legacy_edit_route_redirects_to_inline_entry(client, django_user_model):
     user = django_user_model.objects.create_user("chart-user", password="safe-password")
     fund = Fund.objects.create(
         legal_name="Chart Fund LPF",
@@ -554,10 +624,9 @@ def test_nav_year_chart_and_existing_edit_form_remain_authenticated(client, djan
     assert client.get(reverse("nav-year-chart", args=[share.pk, 2024])).status_code == 404
 
     edit = client.get(reverse("nav-edit", args=[share.pk, record.pk]))
-    assert edit.status_code == 200
-    assert edit.context["form"].instance == record
-    assert edit.context["form"]["nav_per_share"].value() == Decimal("101.123456789")
-    assert edit.context["reason_form"] is not None
+    assert edit.status_code == 302
+    assert edit.url == reverse("simple-entry", args=[share.pk])
+    assert client.post(reverse("nav-edit", args=[share.pk, record.pk])).status_code == 405
 
 
 @pytest.mark.django_db
@@ -914,28 +983,24 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
     share = ShareClass.objects.get(fund=fund, code="a")
     for month, day, nav in ((1, 31, "101"), (2, 29, "102"), (3, 31, "103")):
         response = client.post(
-            reverse("nav-create", args=[share.pk]),
+            reverse("simple-entry", args=[share.pk]),
             {
+                "action": "create_nav",
                 "valuation_month": f"2024-{month:02d}-{day}",
-                "valuation_date": f"2024-{month:02d}-{day}",
                 "nav_per_share": nav,
-                "status": "OFFICIAL",
-                "note": "",
             },
         )
         assert response.status_code == 302
     duplicate_response = client.post(
-        reverse("nav-create", args=[share.pk]),
+        reverse("simple-entry", args=[share.pk]),
         {
+            "action": "create_nav",
             "valuation_month": "2024-01-31",
-            "valuation_date": "2024-01-31",
             "nav_per_share": "104",
-            "status": "OFFICIAL",
-            "note": "duplicate attempt",
         },
     )
     assert duplicate_response.status_code == 200
-    assert "已存在一筆有效 NAV 紀錄" in duplicate_response.content.decode()
+    assert "該月份已有 NAV 紀錄" in duplicate_response.content.decode()
     response = client.post(
         reverse("report-create"),
         {
@@ -1000,14 +1065,12 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
 
     february = NAVRecord.objects.get(share_class=share, valuation_month=date(2024, 2, 29))
     response = client.post(
-        reverse("nav-edit", args=[share.pk, february.pk]),
+        reverse("simple-entry", args=[share.pk]),
         {
-            "valuation_month": "2024-02-29",
-            "valuation_date": "2024-02-29",
+            "action": "update_nav",
+            "record_id": february.pk,
             "nav_per_share": "102.5",
-            "status": "OFFICIAL",
-            "note": "Audited correction",
-            "reason": "Administrator-approved source correction",
+            "confirm_large_change": "1",
         },
     )
     assert response.status_code == 302

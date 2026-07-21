@@ -502,14 +502,44 @@ def latest_completed_month(today: date | None = None) -> date:
     return date(today.year, today.month, 1) - timedelta(days=1)
 
 
+def _large_nav_change_warning(
+    *,
+    share_class: ShareClass,
+    valuation_month: date,
+    nav_value: Decimal,
+    confirmed: bool,
+) -> str:
+    if confirmed:
+        return ""
+    prior = (
+        share_class.nav_records.filter(
+            is_active=True,
+            valuation_month__lt=valuation_month,
+        )
+        .order_by("-valuation_month")
+        .first()
+    )
+    if not prior:
+        return ""
+    change = nav_value / prior.nav_per_share - Decimal(1)
+    threshold = OrganizationSettings.load().nav_change_warning_threshold
+    if abs(change) <= threshold:
+        return ""
+    return (
+        f"NAV 相對 {prior.valuation_month:%Y 年 %m 月} 變動 {change * 100:.2f}%。"
+        "請檢查數值；如確認正確，再按一次儲存。"
+    )
+
+
 class SimpleEntryForm(forms.Form):
     valuation_month = forms.DateField(widget=forms.HiddenInput)
     nav_per_share = forms.DecimalField(
         label="每股 NAV",
         max_digits=38,
-        decimal_places=18,
-        min_value=Decimal("0.000000000000000001"),
-        help_text="請輸入該月份正式的每股 NAV。",
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        help_text="請輸入該月份正式的每股 NAV（小數點後最多兩位）。",
+        widget=forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
     )
     confirm_large_change = forms.BooleanField(required=False, widget=forms.HiddenInput)
 
@@ -552,23 +582,48 @@ class SimpleEntryForm(forms.Form):
             return cleaned
         if nav_value is None:
             return cleaned
-        prior = (
-            self.share_class.nav_records.filter(
-                is_active=True,
-                valuation_month__lt=valuation_month,
-            )
-            .order_by("-valuation_month")
-            .first()
+        self.large_change_warning = _large_nav_change_warning(
+            share_class=self.share_class,
+            valuation_month=valuation_month,
+            nav_value=nav_value,
+            confirmed=bool(cleaned.get("confirm_large_change")),
         )
-        if prior:
-            change = nav_value / prior.nav_per_share - Decimal(1)
-            threshold = OrganizationSettings.load().nav_change_warning_threshold
-            if abs(change) > threshold and not cleaned.get("confirm_large_change"):
-                self.large_change_warning = (
-                    f"NAV 相對 {prior.valuation_month:%Y 年 %m 月} 變動 {change * 100:.2f}%。"
-                    "請檢查數值；如確認正確，再按一次儲存。"
-                )
-                raise forms.ValidationError(self.large_change_warning)
+        if self.large_change_warning:
+            raise forms.ValidationError(self.large_change_warning)
+        return cleaned
+
+
+class InlineNAVUpdateForm(forms.Form):
+    nav_per_share = forms.DecimalField(
+        label="每股 NAV",
+        max_digits=38,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        widget=forms.NumberInput(attrs={"step": "0.01", "inputmode": "decimal"}),
+    )
+    confirm_large_change = forms.BooleanField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, record: NAVRecord, **kwargs):
+        self.record = record
+        self.large_change_warning = ""
+        kwargs.setdefault("initial", {"nav_per_share": record.nav_per_share})
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned = super().clean()
+        nav_value = cleaned.get("nav_per_share")
+        if nav_value is None:
+            return cleaned
+        if nav_value == self.record.nav_per_share:
+            return cleaned
+        self.large_change_warning = _large_nav_change_warning(
+            share_class=self.record.share_class,
+            valuation_month=self.record.valuation_month,
+            nav_value=nav_value,
+            confirmed=bool(cleaned.get("confirm_large_change")),
+        )
+        if self.large_change_warning:
+            raise forms.ValidationError(self.large_change_warning)
         return cleaned
 
 

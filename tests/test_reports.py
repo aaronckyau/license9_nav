@@ -33,6 +33,7 @@ from navapp.services.reports import (
     mark_fund_reports_stale,
     mark_organization_reports_stale,
     mark_share_class_reports_stale,
+    reset_affected_mutable_reports,
     sha256_file,
 )
 from navapp.services.rfr import set_manual_snapshot
@@ -179,7 +180,7 @@ def test_monthly_docx_uses_monthly_period_and_return_table(report_fixture):
     assert "February 2024 Monthly Report" in paragraph_text
     assert "Fund Performance (Monthly Returns)" in paragraph_text
     assert "2024-02" in table_text
-    assert "103" in table_text
+    assert "103.00" in table_text
     assert "1.98%" in table_text
     assert all("Version" not in footer.text for footer in document.sections[0].footer.paragraphs)
 
@@ -298,6 +299,31 @@ def test_finalized_report_is_immutable_and_nav_edit_marks_it_stale(report_fixtur
     assert mark_affected_reports_stale(record, user, "NAV correction") == 1
     report.refresh_from_db()
     assert report.status == QuarterlyReport.Status.STALE
+
+
+@pytest.mark.django_db
+def test_nav_change_resets_mutable_report_snapshot_and_downloads(report_fixture, monkeypatch):
+    report, user, _ = report_fixture
+
+    def fake_convert(docx_path, output_dir):
+        pdf = output_dir / f"{docx_path.stem}.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n% mutable fixture\n")
+        return pdf
+
+    monkeypatch.setattr(reports, "convert_docx_to_pdf", fake_convert)
+    generate_report_files(report, user)
+    report.refresh_from_db()
+    assert report.status == QuarterlyReport.Status.READY
+    assert report.snapshot
+    assert report.files.count() == 2
+
+    record = report.share_class.nav_records.get(valuation_month=date(2024, 2, 29))
+    assert reset_affected_mutable_reports(record, user, "NAV correction") == 1
+    report.refresh_from_db()
+    assert report.status == QuarterlyReport.Status.DRAFT
+    assert report.snapshot == {}
+    assert report.generation_error == ""
+    assert not report.files.exists()
 
 
 @pytest.mark.django_db

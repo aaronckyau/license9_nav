@@ -13,8 +13,8 @@
       <div class="card-top"><span class="pill">{{ card.share_class.fund.short_code|upper }}</span><span class="status {{ card.latest_report.status|default:'DRAFT'|lower }}">{{ card.status|choice_label }}</span></div>
       <h2>{{ card.share_class.fund.display_name }}</h2>
       <p class="muted">{{ card.share_class.name }} · {{ card.share_class.currency }} · {{ card.share_class.return_basis|choice_label }}</p>
-      <dl class="metric-pair"><div><dt>最新 NAV 月份</dt><dd>{{ card.latest_nav.valuation_month|date:"Y 年 n 月"|default:"—" }}</dd></div><div><dt>每股 NAV</dt><dd>{{ card.latest_nav.nav_per_share|nav_display:6 }}</dd></div></dl>
-      <div class="card-actions"><a class="button primary" href="{% url 'simple-entry' card.share_class.pk %}">輸入每股 NAV</a><a href="{% url 'nav-history' card.share_class.pk %}">NAV 歷史紀錄</a>{% if card.latest_report %}<a href="{% url 'report-history' %}?report={{ card.latest_report.pk }}">評論及產生報告</a>{% endif %}</div>
+      <dl class="metric-pair"><div><dt>最新 NAV 月份</dt><dd>{{ card.latest_nav.valuation_month|date:"Y 年 n 月"|default:"—" }}</dd></div><div><dt>每股 NAV</dt><dd>{{ card.latest_nav.nav_per_share|nav_display:2 }}</dd></div></dl>
+      <div class="card-actions"><a class="button primary" href="{% url 'simple-entry' card.share_class.pk %}">輸入每股 NAV</a>{% if card.latest_report %}<a href="{% url 'report-history' %}?report={{ card.latest_report.pk }}">評論及產生報告</a>{% endif %}</div>
     </article>
     {% endfor %}
   </div>

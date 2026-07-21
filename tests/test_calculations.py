@@ -86,6 +86,8 @@ def test_monthly_report_uses_month_end_and_exposes_latest_month_return():
     )
 
     assert result["report_type"] == "MONTHLY"
+    assert result["monthly"][-1]["nav"] == "103"
+    assert result["monthly"][-1]["nav_display"] == "103.00"
     assert result["metrics_raw"]["latest_period_return"] == str(
         Decimal("103") / Decimal("101") - Decimal(1)
     )

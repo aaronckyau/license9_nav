@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db import IntegrityError, connections, transaction
+from django.db import connections, transaction
 from django.db.models import Prefetch
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -22,9 +22,8 @@ from navapp.forms import (
     CommentaryForm,
     ContactFormSet,
     FundForm,
+    InlineNAVUpdateForm,
     ManualRFRForm,
-    NAVEditReasonForm,
-    NAVRecordForm,
     OrganizationSettingsForm,
     PartyFormSet,
     ReportCreateForm,
@@ -68,6 +67,7 @@ from navapp.services.reports import (
     mark_fund_reports_stale,
     mark_organization_reports_stale,
     mark_share_class_reports_stale,
+    reset_affected_mutable_reports,
 )
 from navapp.services.rfr import (
     RFRProviderError,
@@ -301,8 +301,75 @@ def simple_entry(request, share_class_pk):
         is_active=True,
         fund__is_active=True,
     )
-    form = SimpleEntryForm(request.POST or None, share_class=share_class)
-    if request.method == "POST" and form.is_valid():
+    action = request.POST.get("action", "create_nav") if request.method == "POST" else ""
+    form = SimpleEntryForm(
+        request.POST if action == "create_nav" else None,
+        share_class=share_class,
+    )
+    inline_update_form = None
+    inline_update_record = None
+    if request.method == "POST" and action == "update_nav":
+        inline_update_record = get_object_or_404(
+            NAVRecord,
+            pk=request.POST.get("record_id"),
+            share_class=share_class,
+            is_active=True,
+        )
+        inline_update_form = InlineNAVUpdateForm(
+            request.POST,
+            record=inline_update_record,
+        )
+        if inline_update_form.is_valid():
+            reason = "由年度 NAV 表直接修改。"
+            new_nav_value = inline_update_form.cleaned_data["nav_per_share"]
+            with transaction.atomic():
+                locked_record = NAVRecord.objects.select_for_update().get(
+                    pk=inline_update_record.pk
+                )
+                if locked_record.nav_per_share == new_nav_value:
+                    changed = False
+                    stale_count = 0
+                else:
+                    changed = True
+                    before = _nav_json(locked_record)
+                    locked_record.nav_per_share = new_nav_value
+                    locked_record.change_acknowledged = bool(
+                        inline_update_form.cleaned_data.get("confirm_large_change")
+                    )
+                    locked_record.revision += 1
+                    locked_record.updated_by = request.user
+                    locked_record.full_clean()
+                    locked_record.save()
+                    AuditLog.objects.create(
+                        actor=request.user,
+                        entity_type="NAVRecord",
+                        entity_id=str(locked_record.pk),
+                        action="UPDATE",
+                        before_json=before,
+                        after_json=_nav_json(locked_record),
+                        reason=reason,
+                    )
+                    stale_count = mark_affected_reports_stale(
+                        locked_record,
+                        request.user,
+                        reason,
+                    )
+                    reset_affected_mutable_reports(
+                        locked_record,
+                        request.user,
+                        reason,
+                    )
+            if not changed:
+                messages.info(request, "NAV 數值沒有變更。")
+            elif stale_count:
+                messages.warning(
+                    request,
+                    f"NAV 已更新；{stale_count} 份受影響的定稿報告已標示為需重新產生。",
+                )
+            else:
+                messages.success(request, "NAV 已更新。")
+            return redirect("simple-entry", share_class_pk=share_class.pk)
+    elif request.method == "POST" and form.is_valid():
         valuation_month = form.cleaned_data["valuation_month"]
         quarter = (valuation_month.month - 1) // 3 + 1
         with transaction.atomic():
@@ -334,6 +401,16 @@ def simple_entry(request, share_class_pk):
                     "generation_error",
                     "updated_at",
                 ]
+            )
+            mark_affected_reports_stale(
+                nav,
+                request.user,
+                "新增月份 NAV。",
+            )
+            reset_affected_mutable_reports(
+                nav,
+                request.user,
+                "新增月份 NAV。",
             )
             AuditLog.objects.create(
                 actor=request.user,
@@ -377,6 +454,8 @@ def simple_entry(request, share_class_pk):
                 form.next_period,
                 form.default_period,
             ),
+            "inline_update_form": inline_update_form,
+            "inline_update_record": inline_update_record,
         },
     )
 
@@ -418,66 +497,13 @@ def _nav_json(item: NAVRecord) -> dict[str, str | int]:
 
 
 @login_required
+@require_GET
 def nav_edit(request, share_class_pk, pk=None):
     share_class = get_object_or_404(ShareClass, pk=share_class_pk)
-    instance = (
+    if pk:
         get_object_or_404(NAVRecord, pk=pk, share_class=share_class)
-        if pk
-        else NAVRecord(share_class=share_class)
-    )
-    before = _nav_json(instance) if pk else {}
-    if request.method == "POST":
-        form = NAVRecordForm(request.POST, instance=instance, share_class=share_class)
-        reason_form = NAVEditReasonForm(request.POST) if pk else None
-        if form.is_valid() and (reason_form is None or reason_form.is_valid()):
-            item = form.save(commit=False)
-            item.updated_by = request.user
-            if not pk:
-                item.created_by = request.user
-            else:
-                item.revision += 1
-            try:
-                item.full_clean()
-                with transaction.atomic():
-                    item.save()
-                    reason = reason_form.cleaned_data["reason"] if reason_form else ""
-                    AuditLog.objects.create(
-                        actor=request.user,
-                        entity_type="NAVRecord",
-                        entity_id=str(item.pk),
-                        action="UPDATE" if pk else "CREATE",
-                        before_json=before,
-                        after_json=_nav_json(item),
-                        reason=reason,
-                    )
-                    if pk:
-                        stale_count = mark_affected_reports_stale(item, request.user, reason)
-                        if stale_count:
-                            messages.warning(
-                                request,
-                                f"已有 {stale_count} 份已定稿報告被標示為需要重新產生。",
-                            )
-            except ValidationError as exc:
-                detail = "; ".join(exc.messages)
-                if "unique_active_nav_month" in detail:
-                    detail = "此股份類別在該月份已存在一筆有效 NAV 紀錄。"
-                form.add_error(None, detail)
-            except IntegrityError:
-                form.add_error(
-                    None,
-                    "此股份類別在該月份已存在一筆有效 NAV 紀錄。",
-                )
-            else:
-                messages.success(request, "NAV 紀錄已儲存。")
-                return redirect("nav-history", pk=share_class.pk)
-    else:
-        form = NAVRecordForm(instance=instance, share_class=share_class)
-        reason_form = NAVEditReasonForm() if pk else None
-    return render(
-        request,
-        "navapp/nav_form.html",
-        {"form": form, "reason_form": reason_form, "share_class": share_class, "editing": bool(pk)},
-    )
+    messages.info(request, "請在年度 NAV 表直接輸入或修改數值。")
+    return redirect("simple-entry", share_class_pk=share_class.pk)
 
 
 @login_required

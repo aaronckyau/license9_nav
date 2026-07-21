@@ -50,7 +50,7 @@ class DashboardYear:
     is_current_input_year: bool
 
 
-def _format_nav(value: Decimal | None, places: int = 6) -> str:
+def _format_nav(value: Decimal | None, places: int = 2) -> str:
     if value is None:
         return "—"
     rounded = value.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
@@ -241,7 +241,7 @@ def generate_nav_year_chart(records: Iterable[NAVRecord], *, mobile: bool = Fals
             zip(x_values, ordered, y_values, strict=True)
         ):
             axis.annotate(
-                _format_nav(record.nav_per_share, 3),
+                _format_nav(record.nav_per_share, 2),
                 (x_value, y_value),
                 xytext=(0, 8 if not mobile or index % 2 == 0 else 22),
                 textcoords="offset points",

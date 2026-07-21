@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import posixpath
 import re
@@ -41,6 +42,9 @@ from navapp.services.commentary import parse_commentary
 
 class ReportGenerationError(RuntimeError):
     pass
+
+
+logger = logging.getLogger(__name__)
 
 
 REQUIRED_CUSTOM_PLACEHOLDERS = {
@@ -607,7 +611,11 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
             cell.text = label
         for item in snapshot["calculation"]["monthly"][-12:]:
             cells = performance.add_row().cells
-            row_values = [item["valuation_month"][:7], item["nav"], item["return_display"]]
+            row_values = [
+                item["valuation_month"][:7],
+                item["nav_display"],
+                item["return_display"],
+            ]
             for cell, value in zip(cells, row_values, strict=True):
                 cell.text = str(value)
         _set_table_geometry(performance, [2600, 3632, 3632])
@@ -960,6 +968,43 @@ def mark_affected_reports_stale(nav_record, actor, reason: str) -> int:
             reason=reason,
         )
     return count
+
+
+def reset_affected_mutable_reports(nav_record, actor, reason: str) -> int:
+    affected = QuarterlyReport.objects.filter(
+        share_class=nav_record.share_class,
+        report_date__gte=nav_record.valuation_month,
+    ).exclude(status__in=[QuarterlyReport.Status.FINAL, QuarterlyReport.Status.STALE])
+    report_ids = list(affected.values_list("pk", flat=True))
+    if not report_ids:
+        return 0
+    obsolete_paths = []
+    for generated in GeneratedFile.objects.filter(report_id__in=report_ids):
+        obsolete_paths.append(generated.absolute_path)
+        generated.delete()
+    transaction.on_commit(lambda: _delete_obsolete_report_files(obsolete_paths))
+    count = affected.update(
+        status=QuarterlyReport.Status.DRAFT,
+        snapshot={},
+        generation_error="",
+    )
+    AuditLog.objects.create(
+        actor=actor,
+        entity_type="NAVRecord",
+        entity_id=str(nav_record.pk),
+        action="INVALIDATE_MUTABLE_REPORTS",
+        after_json={"reports_reset": count},
+        reason=reason,
+    )
+    return count
+
+
+def _delete_obsolete_report_files(paths: list[Path]) -> None:
+    for path in paths:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Unable to delete obsolete generated report file: %s", path)
 
 
 def _mark_source_reports_stale(

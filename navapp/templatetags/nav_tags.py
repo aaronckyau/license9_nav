@@ -23,7 +23,7 @@ def get_item(mapping, key):
 
 
 @register.filter
-def nav_display(value, places=6):
+def nav_display(value, places=2):
     if value in {None, ""}:
         return "—"
     try:

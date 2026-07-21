@@ -12,7 +12,6 @@
         <span>{{ share_class.name }} · {{ share_class.currency }}</span>
       </p>
     </div>
-    <a class="button ghost nav-history-action" href="{% url 'nav-history' share_class.pk %}">修正 NAV 歷史紀錄</a>
   </header>
 
   <section class="nav-metadata" aria-label="NAV 月份說明">
@@ -23,11 +22,12 @@
   {% if form.non_field_errors or form.valuation_month.errors %}
     <div class="error-summary">{{ form.non_field_errors }}{{ form.valuation_month.errors }}</div>
   {% endif %}
+  {% if inline_update_form.non_field_errors %}
+    <div class="error-summary">{{ inline_update_form.non_field_errors }}</div>
+  {% endif %}
 
   {% if next_period %}
-  <form method="post" class="nav-dashboard-form">{% csrf_token %}
-    <input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
-    {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+  <div class="nav-dashboard-form">
     <section class="nav-entry-guidance" aria-label="下一個待輸入月份">
       <span class="nav-guidance-dot" aria-hidden="true"></span>
       <div><strong>下一個待輸入月份：{{ next_period|date:"Y 年 n 月" }}</strong><small>系統只開放最早缺少的月份，避免跳月及重複紀錄。</small></div>
@@ -39,7 +39,7 @@
         <span class="nav-status-icon" aria-hidden="true">✓</span>
         <div>
           <h2 id="nav-latest-title">每月 NAV 已是最新</h2>
-          <p>截至 {{ default_period|date:"Y 年 n 月" }}的月份均已有 NAV 紀錄。您仍可在下方查看或編輯既有月份。</p>
+          <p>截至 {{ default_period|date:"Y 年 n 月" }}的月份均已有 NAV 紀錄。您可在下方直接修改並儲存既有月份。</p>
         </div>
       </div>
       <a class="button primary nav-report-action" href="{% url 'report-history' %}">前往評論及產生報告 <span aria-hidden="true">→</span></a>
@@ -97,26 +97,44 @@
 
         <div class="nav-table-wrap">
           <table class="nav-dashboard-table">
-            <caption class="sr-only">{{ year_group.year }} 年每月 NAV、回報、狀態及編輯操作</caption>
+            <caption class="sr-only">{{ year_group.year }} 年每月 NAV、回報及儲存操作</caption>
             <thead>
-              <tr><th>月份</th><th class="numeric">NAV（每股）</th><th class="numeric">月度回報</th><th class="numeric">累積回報</th><th>狀態</th><th>操作</th></tr>
+              <tr><th>月份</th><th class="numeric">NAV（每股）</th><th class="numeric">月度回報</th><th class="numeric">累積回報</th><th>操作</th></tr>
             </thead>
             <tbody>
               {% for month in year_group.months %}
               <tr data-year="{{ year_group.year }}" data-month-row{% if month.is_next %} class="nav-pending-row"{% endif %}>
                 <td class="nav-month-cell" data-label="月份"><strong>{{ month.month }} 月</strong></td>
                 {% if month.is_next %}
-                  <td class="nav-value-cell numeric" data-label="NAV（每股）">{{ form.nav_per_share }}{{ form.nav_per_share.errors }}</td>
+                  <td class="nav-value-cell numeric" data-label="NAV（每股）">
+                    <form id="nav-create-{{ year_group.year }}-{{ month.month }}" method="post" class="nav-inline-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="create_nav">
+                      <input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
+                      {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+                      {{ form.nav_per_share }}{{ form.nav_per_share.errors }}
+                    </form>
+                  </td>
                   <td class="nav-monthly-return numeric nav-return-neutral" data-label="月度回報">—</td>
                   <td class="nav-cumulative-return numeric nav-return-neutral" data-label="累積回報">—</td>
-                  <td class="nav-status-cell" data-label="狀態"><span class="nav-status-pill pending">待輸入</span></td>
-                  <td class="nav-action-cell" data-label="操作"><button class="button primary nav-add-button" type="submit">{% if form.large_change_warning %}確認數值並新增{% else %}新增月份{% endif %}</button></td>
+                  <td class="nav-action-cell" data-label="操作"><button class="button primary nav-add-button" form="nav-create-{{ year_group.year }}-{{ month.month }}" type="submit">{% if form.large_change_warning %}確認數值並新增{% else %}新增月份{% endif %}</button></td>
                 {% else %}
-                  <td class="nav-value-cell numeric" data-label="NAV（每股）">{{ month.nav_display }}</td>
+                  <td class="nav-value-cell numeric" data-label="NAV（每股）">
+                    <form id="nav-update-{{ month.record.pk }}" method="post" class="nav-inline-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="update_nav">
+                      <input type="hidden" name="record_id" value="{{ month.record.pk }}">
+                      {% if inline_update_record.pk == month.record.pk %}
+                        {% if inline_update_form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
+                        {{ inline_update_form.nav_per_share }}{{ inline_update_form.nav_per_share.errors }}
+                      {% else %}
+                        <input type="number" name="nav_per_share" value="{{ month.nav_display }}" min="0.01" step="0.01" inputmode="decimal" aria-label="{{ year_group.year }} 年 {{ month.month }} 月每股 NAV">
+                      {% endif %}
+                    </form>
+                  </td>
                   <td class="nav-monthly-return numeric {{ month.monthly_return_class }}" data-label="月度回報">{{ month.monthly_return_display }}</td>
                   <td class="nav-cumulative-return numeric {{ month.cumulative_return_class }}" data-label="累積回報">{{ month.cumulative_return_display }}</td>
-                  <td class="nav-status-cell" data-label="狀態"><span class="nav-status-pill">已完成</span></td>
-                  <td class="nav-action-cell" data-label="操作"><a class="nav-edit-link" href="{% url 'nav-edit' share_class.pk month.record.pk %}" aria-label="編輯 {{ year_group.year }} 年 {{ month.month }} 月 NAV">編輯</a></td>
+                  <td class="nav-action-cell" data-label="操作"><button class="button ghost nav-save-button" form="nav-update-{{ month.record.pk }}" type="submit">{% if inline_update_record.pk == month.record.pk and inline_update_form.large_change_warning %}確認並儲存{% else %}儲存{% endif %}</button></td>
                 {% endif %}
               </tr>
               {% endfor %}
@@ -129,10 +147,6 @@
       {% endfor %}
     </div>
 
-  {% if next_period %}
-  </form>
-  {% else %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}

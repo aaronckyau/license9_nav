@@ -11,7 +11,7 @@ python manage.py check                            PASS (0 issues)
 python manage.py makemigrations --check --dry-run PASS (No changes detected)
 python manage.py migrate --check                  PASS
 python manage.py check --deploy                   PASS (exit 0; W005/W021 intentionally retained)
-pytest -q                                         PASS: 50 passed, 1 skipped
+pytest -q                                         PASS: 51 passed, 1 skipped
 docker compose --env-file .env.example config --quiet PASS
 VPS docker compose build/up + all healthchecks    PASS
 VPS /app/scripts/smoke_report.sh                  PASS (DOCX + LibreOffice PDF)
@@ -55,7 +55,7 @@ Public /nav login/logout/static/health/readiness PASS
 
 功能 commit `0cde04b` 部署後，再由公開 HTTPS 入口以一次性 QA 帳號驗證登入、基金首頁、`/nav/classes/1/entry/` 與 `/nav/reports/`；頁面均顯示新版繁體中文工作流，一次性帳號隨即刪除，未寫入基金、NAV 或報告資料。
 
-「NAV 已是最新」狀態另加入 regression test，確認年份／月份、六位小數 NAV 及每筆編輯 URL 仍顯示。以本機真實 XSQ 資料在 1440×1000 與 390×844 驗證 48 個編輯入口：兩個 viewport 均無水平溢出、console error 為 0；既有月份編輯頁可載入原值及稽核原因欄。
+「NAV 已是最新」狀態最初曾驗證六位小數及獨立編輯入口；該歷史行為已由 2026-07-21 的兩位小數表內修改流程取代，最新證據見下方「年度 NAV 表內修改及兩位小數」。
 
 功能 commit `f35ae2b` 部署後，再由公開 HTTPS 入口確認最新 NAV 頁顯示 48 個編輯 URL，並成功只讀載入既有 NAV 的編輯表單、原值及稽核原因欄；production CSS、health/readiness 與三個容器 healthcheck 均通過，一次性 QA 帳號隨即刪除。
 
@@ -88,7 +88,7 @@ Playwright 使用 bundled Node、`NODE_PATH` 與 Edge executable，`QA_BASE_URL=
 
 ## 年度 NAV 儀表板驗證（2026-07-20）
 
-- `tests/test_imports_models_web.py`：覆蓋上一年度 12 月基準、無基準 fallback、首筆「—」、缺月不誤標單月回報、待輸入月份排序、正負月回報／累積回報、FY／YTD、6 位 NAV、12 個月份、全部編輯 URL、目標頁及圖表登入保護、404、no-store 及原有編輯表單。
+- `tests/test_imports_models_web.py`：覆蓋上一年度 12 月基準、無基準 fallback、首筆「—」、缺月不誤標單月回報、待輸入月份排序、正負月回報／累積回報、FY／YTD、2 位 NAV、12 個月份、表內儲存、no-op、舊路徑 405／redirect、圖表登入保護、404 及 no-store。
 - 實際 XSQ 本機資料：5 個年度、48 個 NAV 編輯入口及 5 張年度圖表均成功載入；瀏覽器主控台 error 為 0。
 - 1440×1000：摘要／圖表約 32%／68%，六欄表格完整，無水平溢位。
 - 1024×900：摘要改為 2×2，圖表及表格垂直排列，無水平溢位。
@@ -96,6 +96,19 @@ Playwright 使用 bundled Node、`NODE_PATH` 與 Edge executable，`QA_BASE_URL=
 - 360×800：摘要 1 欄，月份卡片及 44px 編輯目標完整，無水平溢位。
 - 另以超長基金／股份類別名稱做臨時本機資料 QA，360px 可自然換行且無水平溢位；驗證後依正確關聯順序刪除臨時資料，未修改正式 XSQ NAV。
 - 視覺證據位於 `artifacts/visual-qa-zh/nav-dashboard-*.png`。
+
+## 年度 NAV 表內修改及兩位小數（2026-07-21）
+
+- 新增及修改表單均只接受正數及小數點後最多兩位；三位小數 POST 回傳表單錯誤且資料庫不變。
+- 既有月份在年度表內直接修改，頁面不再輸出 `nav-edit` URL、修改原因、估值日期、狀態或「修正 NAV 歷史紀錄」。
+- 表內修改保留原 valuation month/date/status，自動遞增 revision、建立 `AuditLog UPDATE` 及固定系統理由；受影響 FINAL 報告仍轉為 `STALE`，原 snapshot/file 保持不變。
+- 權威計算仍使用底層 `Decimal` 精度；年度表、首頁、月報 HTML 預覽、檢查頁及內建月報 DOCX 的 NAV 顯示統一為兩位小數。
+- 舊 `/nav/new/` 及 `/nav/<id>/edit/` 路徑保留相容 redirect，只導回年度 NAV 表，不再提供獨立表單。
+- 舊路徑只接受 GET redirect；舊表單 POST 明確回覆 HTTP 405，避免看似成功但未儲存。相同數值的表內 POST 顯示「沒有變更」，不增 revision、不建 audit、亦不把報告標示過期。
+- NAV 真正變更時，受影響 FINAL 報告維持不可變並轉為 STALE；受影響的未定稿報告會回到 DRAFT、清除舊 snapshot/error/GeneratedFile 及檔案，避免下載過時成果。
+- 本機真實 XSQ 資料的 in-app browser QA：1440×1000、1024×900、390×844 三個 viewport 的 `documentElement.scrollWidth` 均小於 viewport；0 console warning/error。頁面有 48 個兩位小數輸入欄及 48 個同列儲存按鈕、0 個 edit link，且不含「修改原因／估值日期／狀態／修正 NAV 歷史紀錄」。390px 手機版輸入寬 165.75px，儲存按鈕 303×44px。
+- 實際互動使用本機 Browser QA 基金把 2025 年 4 月 NAV `151.25 → 151.26`，收到「NAV 已更新。」後再還原為 `151.25`；XSQ NAV 未被修改。暫時 QA 帳戶已刪除。
+- 視覺證據：`artifacts/visual-qa/nav-inline-desktop-1440.png`、`nav-inline-tablet-1024.png`、`nav-inline-mobile-390.png`、`nav-inline-mobile-390-table.png`、`nav-inline-mobile-390-action.png`。
 
 ## 年度 NAV 儀表板 production 部署驗證（2026-07-20）
 

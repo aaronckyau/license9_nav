@@ -378,6 +378,7 @@ def calculate_performance(
             "valuation_month": point.valuation_month.isoformat(),
             "valuation_date": point.valuation_date.isoformat(),
             "nav": str(point.nav),
+            "nav_display": format_decimal(point.nav, 2),
             "revision": point.revision,
             "return_raw": str(return_value),
             "return_display": format_percent(return_value, percentage_places),
