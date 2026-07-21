@@ -207,15 +207,13 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert reverse("simple-entry", args=[share.pk]) in dashboard_text
     assert "選擇基金" in dashboard_text
     assert "輸入每股 NAV" in dashboard_text
-    assert "評論及產生報告" in dashboard_text
     assert "檢視績效" not in dashboard_text
 
     entry = client.get(reverse("simple-entry", args=[share.pk]))
     assert entry.status_code == 200
     assert entry.context["form"]["valuation_month"].value() == date(2024, 3, 31)
     assert entry.context["next_period"] == date(2024, 3, 31)
-    assert "系統日期：2026 年 7 月 20 日" in entry.content.decode()
-    assert "最近已完成月份：2026 年 6 月" in entry.content.decode()
+    assert "新增 3 月 NAV" in entry.content.decode()
     assert "2024" in entry.content.decode()
     assert "3 月" in entry.content.decode()
     assert 'name="commentary_markdown"' not in entry.content.decode()
@@ -341,7 +339,7 @@ def test_simple_nav_entry_lists_existing_months_and_next_missing_month(
     assert "2025" in content
     assert "1 月" in content and "40" in content
     assert "2 月" in content and "69" in content
-    assert "3 月" in content and "新增月份" in content
+    assert "3 月" in content and "新增 3 月 NAV" in content
 
 
 @pytest.mark.django_db
@@ -385,7 +383,7 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
 
     assert response.status_code == 200
     assert response.context["next_period"] is None
-    assert "每月 NAV 已是最新" in content
+    assert "NAV 已輸入至最近完成月份" in content
     assert "2025" in content
     for record in records:
         assert f"{record.valuation_month.month} 月" in content
@@ -456,7 +454,7 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
 
 
 @pytest.mark.django_db
-def test_nav_dashboard_renders_yearly_metrics_returns_charts_and_all_months(
+def test_nav_dashboard_renders_table_without_yearly_metrics_or_charts(
     client, django_user_model, monkeypatch
 ):
     monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2026, 3, 20))
@@ -504,20 +502,19 @@ def test_nav_dashboard_renders_yearly_metrics_returns_charts_and_all_months(
 
     assert response.status_code == 200
     assert response.context["next_period"] is None
-    assert "最新 NAV（2026 年 2 月）" in content
-    assert "年初至今回報（YTD）" in content
-    assert "+7.61%" in content
-    assert "全年度回報（FY）" in content
-    assert "+15.00%" in content
-    assert "-2.17%" in content
-    assert "+10.00%" in content
+    assert "NAV（每股）" in content
+    assert "月度回報" in content
+    assert "累積回報" in content
+    assert "NAV 趨勢圖" not in content
+    assert "最新 NAV（2026 年 2 月）" not in content
+    assert "年初至今回報（YTD）" not in content
     assert "nav-return-positive" in content
     assert "nav-return-negative" in content
     assert 'data-year="2025"' in content
     assert content.count('data-year="2025" data-month-row') == 12
     assert 'value="99.00"' in content
-    assert reverse("nav-year-chart", args=[share.pk, 2025]) in content
-    assert reverse("nav-year-chart", args=[share.pk, 2026]) in content
+    assert reverse("nav-year-chart", args=[share.pk, 2025]) not in content
+    assert reverse("nav-year-chart", args=[share.pk, 2026]) not in content
     for record in records:
         assert reverse("nav-edit", args=[share.pk, record.pk]) not in content
 
@@ -572,7 +569,7 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
     assert year.months[3].monthly_return is None
     assert year.months[3].monthly_return_display == "—"
     assert year.months[3].cumulative_return == Decimal("-0.01")
-    assert "無上一年度末 NAV；以 2025 年首筆 NAV 為基準" in response.content.decode()
+    assert "新增 3 月 NAV" in response.content.decode()
 
 
 @pytest.mark.django_db

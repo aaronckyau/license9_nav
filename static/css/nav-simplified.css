@@ -1,0 +1,59 @@
+.fund-selection-body .workflow a:not(:first-child) {
+  display: none;
+}
+
+.fund-card-link {
+  color: inherit;
+  display: block;
+}
+
+.fund-card-link:hover {
+  box-shadow: 0 2px 8px rgba(15, 35, 65, 0.08);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fund-card-link:focus-visible {
+  outline: 3px solid rgba(23, 105, 210, 0.28);
+  outline-offset: 3px;
+}
+
+.fund-card-action {
+  align-items: center;
+  color: var(--blue);
+  display: flex;
+  font-weight: 800;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.nav-dashboard-form {
+  display: grid;
+  gap: 12px;
+}
+
+.nav-entry-hint {
+  color: #526379;
+  margin: 0;
+}
+
+.nav-year-heading {
+  padding-bottom: 12px;
+}
+
+.nav-dashboard-table th:nth-child(1) {
+  width: 14%;
+}
+
+.nav-dashboard-table th:nth-child(2) {
+  width: 28%;
+}
+
+.nav-dashboard-table th:nth-child(3),
+.nav-dashboard-table th:nth-child(4) {
+  width: 22%;
+}
+
+.nav-dashboard-table th:nth-child(5) {
+  width: 14%;
+}
