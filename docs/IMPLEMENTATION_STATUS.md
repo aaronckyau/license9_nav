@@ -1,11 +1,11 @@
 # Implementation Status
 
-## 2026-07-21 NAV 刪除與報告頁簡化（本機待發佈）
+## 2026-07-21 NAV 刪除與報告頁簡化（已發佈）
 
 - 每月 NAV 表格新增可稽核的刪除按鈕；刪除後會使受影響報告進入需要重新產生的狀態。
 - 報告期間表單選擇季報時，截止欄位會顯示為「截止季度」並限制為四個季度結束月份。
 - 一般報告操作頁只顯示目前新建或選取的報告，避免歷史報告卡片堆疊。
-- 已完成焦點整合測試、Ruff、Django system check、migration check；完整 suite 待手動驗證後發佈。
+- commit `50408a5` 已推送 GitHub `main` 並部署至 Contabo production。本機完整 suite 為 `52 passed, 1 skipped`（本機缺少 LibreOffice），Ruff、Django system check、migration check 均通過；VPS 容器健康、DOCX/PDF smoke 與公開 health/readiness 均通過。
 
 ## 2026-07-21 NAV 年度輸入流程修正（已發佈）
 
