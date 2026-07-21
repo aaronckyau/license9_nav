@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, slots=True)
 class DashboardMonth:
     month: int
+    valuation_month: date
     record: NAVRecord | None
     nav_display: str
     monthly_return: Decimal | None
@@ -29,6 +30,7 @@ class DashboardMonth:
     cumulative_return_display: str
     cumulative_return_class: str
     is_next: bool = False
+    is_entry_allowed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +84,7 @@ def build_nav_dashboard_years(
     *,
     next_period: date | None,
     default_period: date,
+    inception_month: date,
 ) -> list[DashboardYear]:
     ordered = sorted(records, key=lambda item: item.valuation_month)
     by_year: dict[int, list[NAVRecord]] = defaultdict(list)
@@ -125,6 +128,7 @@ def build_nav_dashboard_years(
             rows.append(
                 DashboardMonth(
                     month=record.valuation_month.month,
+                    valuation_month=record.valuation_month,
                     record=record,
                     nav_display=_format_nav(record.nav_per_share),
                     monthly_return=monthly_return,
@@ -137,10 +141,21 @@ def build_nav_dashboard_years(
             )
             prior_record = record
 
-        if next_period and next_period.year == year:
+        rows_by_month = {row.month: row for row in rows}
+        rows = []
+        for month in range(1, 13):
+            existing_row = rows_by_month.get(month)
+            if existing_row:
+                rows.append(existing_row)
+                continue
+            valuation_month = date(year, month, 1)
+            is_entry_allowed = valuation_month >= inception_month.replace(
+                day=1
+            ) and valuation_month <= default_period.replace(day=1)
             rows.append(
                 DashboardMonth(
-                    month=next_period.month,
+                    month=month,
+                    valuation_month=valuation_month,
                     record=None,
                     nav_display="—",
                     monthly_return=None,
@@ -149,10 +164,10 @@ def build_nav_dashboard_years(
                     cumulative_return=None,
                     cumulative_return_display="—",
                     cumulative_return_class="nav-return-neutral",
-                    is_next=True,
+                    is_next=is_entry_allowed,
+                    is_entry_allowed=is_entry_allowed,
                 )
             )
-            rows.sort(key=lambda row: row.month)
 
         if year_records:
             latest = year_records[-1]

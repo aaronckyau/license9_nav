@@ -283,13 +283,14 @@ def _draft_report_for_period(
 
 
 def _simple_nav_years(
-    share_class: ShareClass, next_period: date | None, default_period: date
+    share_class: ShareClass, selected_year: int, default_period: date
 ) -> list[DashboardYear]:
     records = share_class.nav_records.filter(is_active=True).order_by("valuation_month")
     return build_nav_dashboard_years(
         records,
-        next_period=next_period,
+        next_period=date(selected_year, 1, 1),
         default_period=default_period,
+        inception_month=month_end(share_class.inception_date),
     )
 
 
@@ -305,6 +306,15 @@ def simple_entry(request, share_class_pk):
     form = SimpleEntryForm(
         request.POST if action == "create_nav" else None,
         share_class=share_class,
+    )
+    selected_year_raw = request.POST.get("return_year") or request.GET.get("year")
+    try:
+        selected_year = int(selected_year_raw) if selected_year_raw else form.default_period.year
+    except (TypeError, ValueError):
+        selected_year = form.default_period.year
+    selected_year = min(
+        max(selected_year, share_class.inception_date.year),
+        form.default_period.year,
     )
     inline_update_form = None
     inline_update_record = None
@@ -368,7 +378,9 @@ def simple_entry(request, share_class_pk):
                 )
             else:
                 messages.success(request, "NAV 已更新。")
-            return redirect("simple-entry", share_class_pk=share_class.pk)
+            return redirect(
+                f"{reverse('simple-entry', args=[share_class.pk])}?year={selected_year}"
+            )
     elif request.method == "POST" and form.is_valid():
         valuation_month = form.cleaned_data["valuation_month"]
         quarter = (valuation_month.month - 1) // 3 + 1
@@ -432,14 +444,11 @@ def simple_entry(request, share_class_pk):
                     "report_period": f"{report.year} Q{report.quarter}",
                 },
             )
-        if valuation_month.month not in {3, 6, 9, 12}:
-            messages.success(
-                request,
-                f"{valuation_month:%Y 年 %m 月} NAV 已新增；可繼續輸入下一個月份。",
-            )
-            return redirect("simple-entry", share_class_pk=share_class.pk)
-        messages.success(request, "季末 NAV 已新增，請填寫本季基金經理評論並產生報告。")
-        return redirect(f"{reverse('report-history')}?report={report.pk}")
+        messages.success(
+            request,
+            f"{valuation_month:%Y 年 %m 月} NAV 已儲存；月度及累積回報已自動更新。",
+        )
+        return redirect(f"{reverse('simple-entry', args=[share_class.pk])}?year={selected_year}")
     return render(
         request,
         "navapp/simple_entry.html",
@@ -451,8 +460,19 @@ def simple_entry(request, share_class_pk):
             "next_period": form.next_period,
             "nav_years": _simple_nav_years(
                 share_class,
-                form.next_period,
+                selected_year,
                 form.default_period,
+            ),
+            "selected_year": selected_year,
+            "entry_years": range(
+                form.default_period.year,
+                share_class.inception_date.year - 1,
+                -1,
+            ),
+            "create_error_period": (
+                request.POST.get("valuation_month", "")
+                if request.method == "POST" and action == "create_nav"
+                else ""
             ),
             "inline_update_form": inline_update_form,
             "inline_update_record": inline_update_record,

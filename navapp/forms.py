@@ -571,15 +571,6 @@ class SimpleEntryForm(forms.Form):
         ).exists():
             self.add_error("valuation_month", "該月份已有 NAV 紀錄，為避免重複不會覆蓋原有資料。")
             return cleaned
-        if self.next_period is None:
-            self.add_error("valuation_month", "所有已完成月份均已有 NAV 紀錄。")
-            return cleaned
-        if valuation_month != self.next_period:
-            self.add_error(
-                "valuation_month",
-                f"目前應輸入 {self.next_period:%Y 年 %m 月}；請重新整理頁面後再試。",
-            )
-            return cleaned
         if nav_value is None:
             return cleaned
         self.large_change_warning = _large_nav_change_warning(

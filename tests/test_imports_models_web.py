@@ -213,7 +213,8 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert entry.status_code == 200
     assert entry.context["form"]["valuation_month"].value() == date(2024, 3, 31)
     assert entry.context["next_period"] == date(2024, 3, 31)
-    assert "新增 3 月 NAV" in entry.content.decode()
+    assert entry.content.decode().count("data-month-row") == 12
+    assert 'name="year"' in entry.content.decode()
     assert "2024" in entry.content.decode()
     assert "3 月" in entry.content.decode()
     assert 'name="commentary_markdown"' not in entry.content.decode()
@@ -257,15 +258,11 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert report.report_date == date(2024, 3, 31)
     assert report.commentary_markdown == ""
     assert report.commentary_date == date(2024, 3, 31)
-    assert response.url == f"{reverse('report-history')}?report={report.pk}"
+    assert response.url == f"{reverse('simple-entry', args=[share.pk])}?year=2026"
     assert AuditLog.objects.filter(action="SIMPLE_ENTRY", entity_id=str(report.pk)).exists()
-    history = client.get(response.url)
-    assert history.status_code == 200
-    assert "系統會自動取得美國財政部 10 年期利率" in history.content.decode()
-    assert "基金經理評論" in history.content.decode()
-    assert "僅儲存評論" in history.content.decode()
-    assert reverse("report-generate", args=[report.pk]) in history.content.decode()
-    assert reverse("simple-entry", args=[share.pk]) in history.content.decode()
+    entry_after_save = client.get(response.url)
+    assert entry_after_save.status_code == 200
+    assert 'value="105.12"' in entry_after_save.content.decode()
 
     duplicate = client.post(
         reverse("simple-entry", args=[share.pk]),
@@ -291,7 +288,7 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
         abnormal_payload | {"confirm_large_change": "1"},
     )
     assert confirmed.status_code == 302
-    assert confirmed.url == reverse("simple-entry", args=[share.pk])
+    assert confirmed.url == f"{reverse('simple-entry', args=[share.pk])}?year=2026"
     assert NAVRecord.objects.filter(share_class=share).count() == 2
     assert NAVRecord.objects.get(valuation_month=date(2024, 4, 30)).change_acknowledged is True
     q2_report = QuarterlyReport.objects.get(share_class=share, year=2024, quarter=2)
@@ -299,10 +296,10 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
 
 
 @pytest.mark.django_db
-def test_simple_nav_entry_lists_existing_months_and_next_missing_month(
+def test_simple_nav_entry_lists_all_months_and_allows_completed_month_entry(
     client, django_user_model, monkeypatch
 ):
-    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2025, 4, 20))
+    monkeypatch.setattr("navapp.forms.timezone.localdate", lambda: date(2025, 6, 20))
     user = django_user_model.objects.create_user("monthly-user", password="safe-password")
     client.force_login(user)
     fund = Fund.objects.create(
@@ -339,7 +336,21 @@ def test_simple_nav_entry_lists_existing_months_and_next_missing_month(
     assert "2025" in content
     assert "1 月" in content and "40" in content
     assert "2 月" in content and "69" in content
-    assert "3 月" in content and "新增 3 月 NAV" in content
+    assert content.count('data-year="2025" data-month-row') == 12
+    assert 'name="valuation_month" value="2025-03-01"' in content
+
+    saved = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "action": "create_nav",
+            "return_year": "2025",
+            "valuation_month": "2025-05-01",
+            "nav_per_share": "71.25",
+        },
+    )
+    assert saved.status_code == 302
+    assert saved.url == f"{reverse('simple-entry', args=[share.pk])}?year=2025"
+    assert NAVRecord.objects.filter(share_class=share, valuation_month=date(2025, 5, 31)).exists()
 
 
 @pytest.mark.django_db
@@ -383,7 +394,7 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
 
     assert response.status_code == 200
     assert response.context["next_period"] is None
-    assert "NAV 已輸入至最近完成月份" in content
+    assert "只需輸入每股 NAV" in content
     assert "2025" in content
     for record in records:
         assert f"{record.valuation_month.month} 月" in content
@@ -406,7 +417,7 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
         },
     )
     assert response.status_code == 302
-    assert response.url == reverse("simple-entry", args=[share.pk])
+    assert response.url == f"{reverse('simple-entry', args=[share.pk])}?year=2025"
     record.refresh_from_db()
     assert record.nav_per_share == Decimal("70.25")
     assert record.valuation_month == date(2025, 2, 28)
@@ -512,6 +523,8 @@ def test_nav_dashboard_renders_table_without_yearly_metrics_or_charts(
     assert "nav-return-negative" in content
     assert 'data-year="2025"' in content
     assert content.count('data-year="2025" data-month-row') == 12
+    assert '<details class="nav-year-card" open>' in content
+    assert '<details class="nav-year-card">' in content
     assert 'value="99.00"' in content
     assert reverse("nav-year-chart", args=[share.pk, 2025]) not in content
     assert reverse("nav-year-chart", args=[share.pk, 2026]) not in content
@@ -564,12 +577,13 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
     assert year.months[0].monthly_return_display == "—"
     assert year.months[1].monthly_return == Decimal("0.1")
     assert year.months[1].cumulative_return == Decimal("0.1")
-    assert [month.month for month in year.months] == [1, 2, 3, 4]
+    assert [month.month for month in year.months] == list(range(1, 13))
     assert year.months[2].is_next is True
     assert year.months[3].monthly_return is None
     assert year.months[3].monthly_return_display == "—"
     assert year.months[3].cumulative_return == Decimal("-0.01")
-    assert "新增 3 月 NAV" in response.content.decode()
+    assert year.months[2].is_entry_allowed is True
+    assert year.months[4].is_entry_allowed is False
 
 
 @pytest.mark.django_db

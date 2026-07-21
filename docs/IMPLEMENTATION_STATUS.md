@@ -1,11 +1,12 @@
 # Implementation Status
 
-## 2026-07-21 NAV 操作流程簡化（已發佈）
+## 2026-07-21 NAV 年度輸入流程（本機待發佈）
 
 - 基金卡片改為單一入口：點選後直接進入「輸入每股 NAV」，不再顯示個別報告連結。
 - NAV 頁只保留月份、每股 NAV、月度回報、累積回報與操作表格；年度摘要與趨勢圖不再顯示。
-- 下一個可新增的已完成月份在表格中顯示空白 NAV 欄與「新增 X 月 NAV」按鈕；既有月份可直接在同列修改後儲存。
-- 已發佈 commit `b126808` 至 GitHub `main` 與 Contabo production；本機完整品質檢查為 `52 passed, 1 skipped`（缺少本機 LibreOffice），Ruff、Django system check、migration check 均通過；VPS 容器健康、DOCX/PDF smoke 與公開 health/readiness 均通過。
+- 年度表格固定顯示 1 至 12 月；目前選取年度預設展開，過去年度預設收起。可選取尚未建立的已結束年度以新增資料。
+- 使用者只輸入每股 NAV；月度及累積回報由系統於儲存後自動計算。未結束月份不開放輸入。
+- 完整品質檢查與 production 發佈待本次變更完成後更新。
 
 ## 2026-07-21 報告品牌與頁尾更新
 

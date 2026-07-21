@@ -19,63 +19,66 @@
   {% endif %}
 
   <div class="nav-dashboard-form">
-    <p class="nav-entry-hint">
-      {% if next_period %}
-        在下方 <strong>{{ next_period|date:"Y 年 n 月" }}</strong> 的列輸入 NAV，然後按「新增 {{ next_period|date:"n 月" }} NAV」。
-      {% else %}
-        NAV 已輸入至最近完成月份（{{ default_period|date:"Y 年 n 月" }}）；下一個完成月份會自動出現在表格中。
-      {% endif %}
-    </p>
+    <section class="nav-entry-guide" aria-label="NAV 輸入說明">
+      <p><strong>只需輸入每股 NAV。</strong>按「儲存」後，系統會自動計算月度回報及累積回報。</p>
+      <p>選取尚未建立的年度後，系統會顯示該年度 1 至 12 月；未結束的月份暫不開放輸入。</p>
+    </section>
+
+    <form method="get" class="nav-year-select-form">
+      <label for="nav-year">顯示或新增年度</label>
+      <select id="nav-year" name="year">
+        {% for year in entry_years %}<option value="{{ year }}"{% if year == selected_year %} selected{% endif %}>{{ year }} 年</option>{% endfor %}
+      </select>
+      <button class="button ghost" type="submit">開啟年度</button>
+    </form>
 
     <div class="nav-year-list">
       {% for year_group in nav_years %}
-      <article class="nav-year-card" aria-labelledby="nav-year-{{ year_group.year }}">
-        <header class="nav-year-heading">
-          <h2 id="nav-year-{{ year_group.year }}">{{ year_group.year }}</h2>
-          {% if year_group.is_current_input_year %}<span class="pill">新增 {{ next_period|date:"n 月" }} NAV</span>{% endif %}
-        </header>
+      <details class="nav-year-card"{% if year_group.is_current_input_year %} open{% endif %}>
+        <summary class="nav-year-heading">
+          <h2>{{ year_group.year }}</h2>
+          <span class="nav-year-summary">{% if year_group.is_current_input_year %}目前輸入年度{% else %}點選展開年度資料{% endif %}</span>
+        </summary>
         <div class="nav-table-wrap">
           <table class="nav-dashboard-table">
-            <caption class="sr-only">{{ year_group.year }} 年每月每股 NAV、回報及編輯操作</caption>
+            <caption class="sr-only">{{ year_group.year }} 年每月每股 NAV、回報及儲存操作</caption>
             <thead><tr><th>月份</th><th class="numeric">NAV（每股）</th><th class="numeric">月度回報</th><th class="numeric">累積回報</th><th>操作</th></tr></thead>
             <tbody>
               {% for month in year_group.months %}
-              <tr data-year="{{ year_group.year }}" data-month-row{% if month.is_next %} class="nav-pending-row"{% endif %}>
+              <tr data-year="{{ year_group.year }}" data-month-row{% if month.record is None and month.is_entry_allowed %} class="nav-pending-row"{% endif %}>
                 <td class="nav-month-cell" data-label="月份"><strong>{{ month.month }} 月</strong></td>
-                {% if month.is_next %}
-                  <td class="nav-value-cell numeric" data-label="NAV（每股）">
-                    <form id="nav-create-{{ year_group.year }}-{{ month.month }}" method="post" class="nav-inline-form">
-                      {% csrf_token %}<input type="hidden" name="action" value="create_nav"><input type="hidden" name="valuation_month" value="{{ next_period|date:'Y-m-d' }}">
-                      {% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}
-                      {{ form.nav_per_share }}{{ form.nav_per_share.errors }}
-                    </form>
-                  </td>
-                  <td class="nav-monthly-return numeric nav-return-neutral" data-label="月度回報">—</td>
-                  <td class="nav-cumulative-return numeric nav-return-neutral" data-label="累積回報">—</td>
-                  <td class="nav-action-cell" data-label="操作"><button class="button primary nav-add-button" form="nav-create-{{ year_group.year }}-{{ month.month }}" type="submit">{% if form.large_change_warning %}確認大幅變動並新增{% else %}新增 {{ month.month }} 月 NAV{% endif %}</button></td>
-                {% else %}
+                {% if month.record %}
                   <td class="nav-value-cell numeric" data-label="NAV（每股）">
                     <form id="nav-update-{{ month.record.pk }}" method="post" class="nav-inline-form">
-                      {% csrf_token %}<input type="hidden" name="action" value="update_nav"><input type="hidden" name="record_id" value="{{ month.record.pk }}">
-                      {% if inline_update_record.pk == month.record.pk %}
-                        {% if inline_update_form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}{{ inline_update_form.nav_per_share }}{{ inline_update_form.nav_per_share.errors }}
-                      {% else %}
-                        <input type="number" name="nav_per_share" value="{{ month.nav_display }}" min="0.01" step="0.01" inputmode="decimal" aria-label="{{ year_group.year }} 年 {{ month.month }} 月每股 NAV">
-                      {% endif %}
+                      {% csrf_token %}<input type="hidden" name="action" value="update_nav"><input type="hidden" name="record_id" value="{{ month.record.pk }}"><input type="hidden" name="return_year" value="{{ selected_year }}">
+                      {% if inline_update_record.pk == month.record.pk %}{% if inline_update_form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}{{ inline_update_form.nav_per_share }}{{ inline_update_form.nav_per_share.errors }}{% else %}<input type="number" name="nav_per_share" value="{{ month.nav_display }}" min="0.01" step="0.01" inputmode="decimal" aria-label="{{ year_group.year }} 年 {{ month.month }} 月每股 NAV">{% endif %}
                     </form>
                   </td>
                   <td class="nav-monthly-return numeric {{ month.monthly_return_class }}" data-label="月度回報">{{ month.monthly_return_display }}</td>
                   <td class="nav-cumulative-return numeric {{ month.cumulative_return_class }}" data-label="累積回報">{{ month.cumulative_return_display }}</td>
                   <td class="nav-action-cell" data-label="操作"><button class="button ghost nav-save-button" form="nav-update-{{ month.record.pk }}" type="submit">{% if inline_update_record.pk == month.record.pk and inline_update_form.large_change_warning %}確認大幅變動{% else %}儲存{% endif %}</button></td>
+                {% elif month.is_entry_allowed %}
+                  <td class="nav-value-cell numeric" data-label="NAV（每股）">
+                    <form id="nav-create-{{ year_group.year }}-{{ month.month }}" method="post" class="nav-inline-form">
+                      {% csrf_token %}<input type="hidden" name="action" value="create_nav"><input type="hidden" name="return_year" value="{{ selected_year }}"><input type="hidden" name="valuation_month" value="{{ month.valuation_month|date:'Y-m-d' }}">
+                      {% if create_error_period == month.valuation_month|date:'Y-m-d' %}{% if form.large_change_warning %}<input type="hidden" name="confirm_large_change" value="1">{% endif %}{{ form.nav_per_share }}{{ form.nav_per_share.errors }}{% else %}<input type="number" name="nav_per_share" min="0.01" step="0.01" inputmode="decimal" aria-label="{{ year_group.year }} 年 {{ month.month }} 月每股 NAV">{% endif %}
+                    </form>
+                  </td>
+                  <td class="nav-monthly-return numeric nav-return-neutral" data-label="月度回報">—</td>
+                  <td class="nav-cumulative-return numeric nav-return-neutral" data-label="累積回報">—</td>
+                  <td class="nav-action-cell" data-label="操作"><button class="button primary nav-add-button" form="nav-create-{{ year_group.year }}-{{ month.month }}" type="submit">儲存</button></td>
+                {% else %}
+                  <td class="nav-value-cell numeric nav-return-neutral" data-label="NAV（每股）">—</td>
+                  <td class="nav-monthly-return numeric nav-return-neutral" data-label="月度回報">—</td>
+                  <td class="nav-cumulative-return numeric nav-return-neutral" data-label="累積回報">—</td>
+                  <td class="nav-action-cell nav-return-neutral" data-label="操作">—</td>
                 {% endif %}
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </article>
-      {% empty %}
-      <section class="panel empty-state"><h2>尚無 NAV 紀錄</h2><p>新增首筆 NAV 後，系統會在下方顯示下一個可輸入月份。</p></section>
+      </details>
       {% endfor %}
     </div>
   </div>

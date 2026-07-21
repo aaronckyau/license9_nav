@@ -37,8 +37,48 @@
   margin: 0;
 }
 
+.nav-entry-guide {
+  border-left: 4px solid var(--blue);
+  color: #526379;
+  padding: 4px 0 4px 14px;
+}
+
+.nav-entry-guide p {
+  margin: 3px 0;
+}
+
+.nav-year-select-form {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.nav-year-select-form label {
+  color: #334155;
+  font-weight: 700;
+}
+
+.nav-year-select-form select {
+  background: #fff;
+  border: 1px solid #9fb7d2;
+  border-radius: 6px;
+  min-height: 40px;
+  padding: 7px 30px 7px 10px;
+}
+
 .nav-year-heading {
+  cursor: pointer;
   padding-bottom: 12px;
+}
+
+.nav-year-heading::marker {
+  content: "";
+}
+
+.nav-year-summary {
+  color: #526379;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .nav-dashboard-table th:nth-child(1) {
