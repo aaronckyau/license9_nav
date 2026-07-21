@@ -314,7 +314,7 @@ def simple_entry(request, share_class_pk):
         selected_year = form.default_period.year
     selected_year = min(
         max(selected_year, share_class.inception_date.year),
-        form.default_period.year,
+        form.default_period.year + 1,
     )
     inline_update_form = None
     inline_update_record = None
@@ -465,7 +465,7 @@ def simple_entry(request, share_class_pk):
             ),
             "selected_year": selected_year,
             "entry_years": range(
-                form.default_period.year,
+                form.default_period.year + 1,
                 share_class.inception_date.year - 1,
                 -1,
             ),

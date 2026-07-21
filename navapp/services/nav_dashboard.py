@@ -149,9 +149,7 @@ def build_nav_dashboard_years(
                 rows.append(existing_row)
                 continue
             valuation_month = date(year, month, 1)
-            is_entry_allowed = valuation_month >= inception_month.replace(
-                day=1
-            ) and valuation_month <= default_period.replace(day=1)
+            is_entry_allowed = valuation_month >= inception_month.replace(day=1)
             rows.append(
                 DashboardMonth(
                     month=month,

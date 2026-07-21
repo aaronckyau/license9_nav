@@ -219,15 +219,15 @@ def test_simple_three_step_workflow_defaults_saves_and_prevents_duplicates(
     assert "3 月" in entry.content.decode()
     assert 'name="commentary_markdown"' not in entry.content.decode()
 
-    future = client.post(
+    before_inception = client.post(
         reverse("simple-entry", args=[share.pk]),
         {
-            "valuation_month": "2026-07-31",
+            "valuation_month": "2024-02-29",
             "nav_per_share": "105",
         },
     )
-    assert future.status_code == 200
-    assert "估值月份不得晚於最近已完成月份" in future.content.decode()
+    assert before_inception.status_code == 200
+    assert "估值月份不得早於股份類別成立月份" in before_inception.content.decode()
     assert not NAVRecord.objects.filter(share_class=share).exists()
 
     excess_precision = client.post(
@@ -338,6 +338,7 @@ def test_simple_nav_entry_lists_all_months_and_allows_completed_month_entry(
     assert "2 月" in content and "69" in content
     assert content.count('data-year="2025" data-month-row') == 12
     assert 'name="valuation_month" value="2025-03-01"' in content
+    assert '<option value="2026">2026 年</option>' in content
 
     saved = client.post(
         reverse("simple-entry", args=[share.pk]),
@@ -351,6 +352,21 @@ def test_simple_nav_entry_lists_all_months_and_allows_completed_month_entry(
     assert saved.status_code == 302
     assert saved.url == f"{reverse('simple-entry', args=[share.pk])}?year=2025"
     assert NAVRecord.objects.filter(share_class=share, valuation_month=date(2025, 5, 31)).exists()
+
+    next_year = client.get(f"{reverse('simple-entry', args=[share.pk])}?year=2026")
+    assert next_year.status_code == 200
+    assert next_year.content.decode().count('data-year="2026" data-month-row') == 12
+    saved_future_year = client.post(
+        reverse("simple-entry", args=[share.pk]),
+        {
+            "action": "create_nav",
+            "return_year": "2026",
+            "valuation_month": "2026-01-01",
+            "nav_per_share": "72.00",
+        },
+    )
+    assert saved_future_year.status_code == 302
+    assert NAVRecord.objects.filter(share_class=share, valuation_month=date(2026, 1, 31)).exists()
 
 
 @pytest.mark.django_db
@@ -583,7 +599,7 @@ def test_nav_dashboard_documents_first_record_fallback_without_fake_initial_retu
     assert year.months[3].monthly_return_display == "—"
     assert year.months[3].cumulative_return == Decimal("-0.01")
     assert year.months[2].is_entry_allowed is True
-    assert year.months[4].is_entry_allowed is False
+    assert year.months[4].is_entry_allowed is True
 
 
 @pytest.mark.django_db

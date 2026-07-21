@@ -560,9 +560,6 @@ class SimpleEntryForm(forms.Form):
             return cleaned
         valuation_month = month_end(valuation_month)
         cleaned["valuation_month"] = valuation_month
-        if valuation_month > self.default_period:
-            self.add_error("valuation_month", "估值月份不得晚於最近已完成月份。")
-            return cleaned
         if valuation_month < month_end(self.share_class.inception_date):
             self.add_error("valuation_month", "估值月份不得早於股份類別成立月份。")
             return cleaned
