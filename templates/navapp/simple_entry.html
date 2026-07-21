@@ -56,7 +56,7 @@
                   </td>
                   <td class="nav-monthly-return numeric {{ month.monthly_return_class }}" data-label="月度回報">{{ month.monthly_return_display }}</td>
                   <td class="nav-cumulative-return numeric {{ month.cumulative_return_class }}" data-label="累積回報">{{ month.cumulative_return_display }}</td>
-                  <td class="nav-action-cell" data-label="操作"><button class="button ghost nav-save-button" form="nav-update-{{ month.record.pk }}" type="submit">{% if inline_update_record.pk == month.record.pk and inline_update_form.large_change_warning %}確認大幅變動{% else %}儲存{% endif %}</button></td>
+                  <td class="nav-action-cell" data-label="操作"><button class="button ghost nav-save-button" form="nav-update-{{ month.record.pk }}" type="submit">{% if inline_update_record.pk == month.record.pk and inline_update_form.large_change_warning %}確認大幅變動{% else %}儲存{% endif %}</button><form method="post" action="{% url 'nav-delete' share_class.pk month.record.pk %}" class="nav-delete-form">{% csrf_token %}<input type="hidden" name="return_year" value="{{ selected_year }}"><button class="button danger" type="submit">刪除</button></form></td>
                 {% elif month.is_entry_allowed %}
                   <td class="nav-value-cell numeric" data-label="NAV（每股）">
                     <form id="nav-create-{{ year_group.year }}-{{ month.month }}" method="post" class="nav-inline-form">

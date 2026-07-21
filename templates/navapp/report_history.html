@@ -15,11 +15,32 @@
     <div class="field">{{ period_form.share_class.label_tag }}{{ period_form.share_class }}{{ period_form.share_class.errors }}</div>
     <div class="field">{{ period_form.report_type.label_tag }}{{ period_form.report_type }}{{ period_form.report_type.errors }}</div>
     <div class="field">{{ period_form.year.label_tag }}{{ period_form.year }}{{ period_form.year.errors }}</div>
-    <div class="field">{{ period_form.month.label_tag }}{{ period_form.month }}{{ period_form.month.errors }}</div>
+    <div class="field"><label id="report-period-label" for="{{ period_form.month.id_for_label }}">截止月份：</label>{{ period_form.month }}{{ period_form.month.errors }}</div>
     <button class="button primary" type="submit">選擇並填寫評論</button>
     {{ period_form.non_field_errors }}
   </form>
 </section>
+
+<script>
+  (() => {
+    const type = document.getElementById("id_report_type");
+    const month = document.getElementById("id_month");
+    const label = document.getElementById("report-period-label");
+    if (!type || !month || !label) return;
+    const monthly = Array.from({length: 12}, (_, index) => [index + 1, `${index + 1} 月`]);
+    const quarterly = [[3, "第 1 季（截至 3 月）"], [6, "第 2 季（截至 6 月）"], [9, "第 3 季（截至 9 月）"], [12, "第 4 季（截至 12 月）"]];
+    const syncPeriod = () => {
+      const isQuarterly = type.value === "QUARTERLY";
+      const choices = isQuarterly ? quarterly : monthly;
+      const current = Number(month.value);
+      month.replaceChildren(...choices.map(([value, text]) => new Option(text, value, false, choices.some(([item]) => item === current) && value === current)));
+      if (!choices.some(([value]) => value === current)) month.value = choices[0][0];
+      label.textContent = isQuarterly ? "截止季度：" : "截止月份：";
+    };
+    type.addEventListener("change", syncPeriod);
+    syncPeriod();
+  })();
+</script>
 
 <section class="report-list" aria-label="報告紀錄">
   {% for report in reports %}

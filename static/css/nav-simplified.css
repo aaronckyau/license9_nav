@@ -81,6 +81,22 @@
   font-weight: 700;
 }
 
+.nav-action-cell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.nav-delete-form {
+  margin: 0;
+}
+
+.button.danger {
+  background: #fff0f0;
+  border-color: #e4b1b1;
+  color: #8f2424;
+}
+
 .nav-dashboard-table th:nth-child(1) {
   width: 14%;
 }

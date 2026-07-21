@@ -479,6 +479,18 @@ def test_simple_nav_entry_keeps_latest_months_visible_and_editable(
     record.refresh_from_db()
     assert record.nav_per_share == Decimal("70.25")
 
+    deleted = client.post(
+        reverse("nav-delete", args=[share.pk, record.pk]),
+        {"return_year": "2025"},
+    )
+    assert deleted.status_code == 302
+    assert deleted.url == f"{reverse('simple-entry', args=[share.pk])}?year=2025"
+    record.refresh_from_db()
+    assert record.is_active is False
+    assert AuditLog.objects.filter(
+        entity_type="NAVRecord", entity_id=str(record.pk), action="DELETE"
+    ).exists()
+
 
 @pytest.mark.django_db
 def test_nav_dashboard_renders_table_without_yearly_metrics_or_charts(

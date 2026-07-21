@@ -32,6 +32,11 @@ urlpatterns = [
         views.nav_edit,
         name="nav-edit",
     ),
+    path(
+        "classes/<int:share_class_pk>/nav/<int:pk>/delete/",
+        views.nav_delete,
+        name="nav-delete",
+    ),
     path("classes/<int:pk>/nav/import/", views.bulk_import, name="bulk-import"),
     path("reports/new/", views.report_create, name="report-create"),
     path("reports/", views.report_history, name="report-history"),

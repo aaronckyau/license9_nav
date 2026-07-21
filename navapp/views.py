@@ -527,6 +527,45 @@ def nav_edit(request, share_class_pk, pk=None):
 
 
 @login_required
+@require_POST
+def nav_delete(request, share_class_pk, pk):
+    share_class = get_object_or_404(ShareClass, pk=share_class_pk, is_active=True)
+    with transaction.atomic():
+        record = get_object_or_404(
+            NAVRecord.objects.select_for_update(),
+            pk=pk,
+            share_class=share_class,
+            is_active=True,
+        )
+        before = _nav_json(record)
+        record.is_active = False
+        record.revision += 1
+        record.updated_by = request.user
+        record.save(update_fields=["is_active", "revision", "updated_by", "updated_at"])
+        AuditLog.objects.create(
+            actor=request.user,
+            entity_type="NAVRecord",
+            entity_id=str(record.pk),
+            action="DELETE",
+            before_json=before,
+            reason="使用者於每月 NAV 表格刪除紀錄",
+        )
+        stale_count = mark_affected_reports_stale(
+            record,
+            request.user,
+            "NAV 紀錄已刪除",
+        )
+        reset_affected_mutable_reports(record, request.user, "NAV 紀錄已刪除")
+    if stale_count:
+        messages.warning(request, f"NAV 已刪除；{stale_count} 份定稿報告需要重新產生。")
+    else:
+        messages.success(request, "NAV 已刪除。")
+    return_year = request.POST.get("return_year", "")
+    suffix = f"?year={return_year}" if return_year.isdigit() else ""
+    return redirect(f"{reverse('simple-entry', args=[share_class.pk])}{suffix}")
+
+
+@login_required
 def bulk_import(request, pk):
     share_class = get_object_or_404(ShareClass, pk=pk)
     preview_rows = None
@@ -847,7 +886,7 @@ def _report_history_context(
             "month": active_report.report_month,
         }
     return {
-        "reports": reports,
+        "reports": [active_report] if active_report else [],
         "selected_report": str(active_report.pk) if active_report else "",
         "report": active_report,
         "period_form": report_create_form or ReportCreateForm(initial=period_initial),
