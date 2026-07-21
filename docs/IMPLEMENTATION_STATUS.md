@@ -1,5 +1,12 @@
 # Implementation Status
 
+## 2026-07-21 月報與季報版面一致化（本機驗證完成，待發佈）
+
+- 月報 DOCX 與 HTML 預覽的「基金表現」已改為與季報相同的年度／Q1–Q4／YTD 績效矩陣；報告標題和截止日期仍保留月報語意，資料只計至所選月報截止日。
+- 基金已設定自訂 DOCX 範本時，月報亦套用同一範本，讓標誌、表格、NAV 圖、統計、評論、頁首頁尾及 disclaimer 結構與季報一致。
+- 已用使用者提供的 `MANU-2026 年第 2 季季報 (3).docx` 結構核對：其基金表現表為六欄 `Year / Q1 / Q2 / Q3 / Q4 / YTD`；本次月報沿用該表格結構。
+- 已通過 `pytest`（`53 passed, 1 skipped`）、Ruff format/check、Django system check 與 migration check；唯一 skip 是本機未安裝 LibreOffice，故 PDF/PNG 渲染保留為部署容器驗證項目。
+
 ## 2026-07-21 NAV 刪除與報告頁簡化（已發佈）
 
 - 每月 NAV 表格新增可稽核的刪除按鈕；刪除後會使受影響報告進入需要重新產生的狀態。

@@ -10,6 +10,7 @@ from zipfile import ZipFile
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from docx import Document
 
 from navapp.models import (
@@ -178,7 +179,7 @@ def test_xsq_report_uses_the_packaged_aureum_logo_and_omits_legacy_fee_note(repo
 
 
 @pytest.mark.django_db
-def test_monthly_docx_uses_monthly_period_and_return_table(report_fixture):
+def test_monthly_docx_uses_monthly_period_and_quarterly_performance_table(report_fixture):
     report, _, tmp_path = report_fixture
     report.report_type = QuarterlyReport.ReportType.MONTHLY
     report.report_month = 2
@@ -205,15 +206,47 @@ def test_monthly_docx_uses_monthly_period_and_return_table(report_fixture):
     assert snapshot["identity"]["period_label"] == "2024 年 2 月月報"
     assert snapshot["calculation"]["report_type"] == "MONTHLY"
     assert "February 2024 Monthly Report" in paragraph_text
-    assert "Fund Performance (Monthly Returns)" in paragraph_text
-    assert "2024-02" in table_text
-    assert "103.00" in table_text
-    assert "1.98%" in table_text
+    assert "Fund Performance (Net Quarterly Returns)" in paragraph_text
+    assert "Fund Performance (Monthly Returns)" not in paragraph_text
+    assert "Year" in table_text
+    assert "Q1" in table_text
+    assert "YTD" in table_text
+    assert "3.00%" in table_text
     assert all("Version" not in footer.text for footer in document.sections[0].footer.paragraphs)
+    package_audit = audit_docx_package(output)
+    assert package_audit["valid"] is True
+    assert package_audit["external_excel_relationships"] == []
 
 
 @pytest.mark.django_db
-def test_monthly_generation_uses_builtin_layout_when_quarterly_custom_template_is_configured(
+def test_monthly_preview_uses_quarterly_performance_table(report_fixture, client):
+    report, user, _ = report_fixture
+    report.report_type = QuarterlyReport.ReportType.MONTHLY
+    report.report_month = 2
+    report.report_date = date(2024, 2, 29)
+    report.commentary_date = report.report_date
+    report.save(
+        update_fields=[
+            "report_type",
+            "report_month",
+            "report_date",
+            "commentary_date",
+            "updated_at",
+        ]
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("report-preview", args=[report.pk]))
+
+    assert response.status_code == 200
+    assert "基金表現－季度淨回報" in response.content.decode()
+    assert "基金表現－每月淨回報" not in response.content.decode()
+    assert "第一季" in response.content.decode()
+    assert "年初至今" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_monthly_generation_uses_custom_layout_when_template_is_configured(
     report_fixture, monkeypatch
 ):
     report, user, _ = report_fixture
@@ -224,23 +257,24 @@ def test_monthly_generation_uses_builtin_layout_when_quarterly_custom_template_i
     report.fund.save(update_fields=["custom_docx_template", "updated_at"])
     custom_calls = []
 
-    def reject_custom(*args, **kwargs):
+    def build_custom(*args, **kwargs):
         custom_calls.append((args, kwargs))
-        raise AssertionError("monthly reports must not use a quarterly-only custom template")
+        snapshot, chart_path, _, output_path = args
+        build_builtin_docx(snapshot, chart_path, output_path)
 
     def fake_convert(docx_path, output_dir):
         pdf = output_dir / f"{docx_path.stem}.pdf"
         pdf.write_bytes(b"%PDF-1.4\n% monthly fallback test\n")
         return pdf
 
-    monkeypatch.setattr(reports, "build_custom_docx", reject_custom)
+    monkeypatch.setattr(reports, "build_custom_docx", build_custom)
     monkeypatch.setattr(reports, "convert_docx_to_pdf", fake_convert)
     generated = generate_report_files(report, user)
 
-    assert custom_calls == []
+    assert len(custom_calls) == 1
     assert {item.file_type for item in generated} == {"DOCX", "PDF"}
     monthly_docx = next(item.absolute_path for item in generated if item.file_type == "DOCX")
-    assert "Fund Performance (Monthly Returns)" in "\n".join(
+    assert "Fund Performance (Net Quarterly Returns)" in "\n".join(
         paragraph.text for paragraph in Document(monthly_docx).paragraphs
     )
 

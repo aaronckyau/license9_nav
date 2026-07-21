@@ -613,39 +613,19 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for strategy in fund["strategies"]:
         document.add_paragraph(str(strategy), style="List Bullet")
 
-    if identity["report_type"] == "MONTHLY":
-        document.add_heading("Fund Performance (Monthly Returns)", level=1)
-        performance = document.add_table(rows=1, cols=3)
-        performance.style = "Table Grid"
-        headers = ["Month", "NAV per Share", "Monthly Return"]
-        for cell, label in zip(performance.rows[0].cells, headers, strict=True):
-            cell.text = label
-        for item in snapshot["calculation"]["monthly"][-12:]:
-            cells = performance.add_row().cells
-            row_values = [
-                item["valuation_month"][:7],
-                item["nav_display"],
-                item["return_display"],
-            ]
-            for cell, value in zip(cells, row_values, strict=True):
-                cell.text = str(value)
-        _set_table_geometry(performance, [2600, 3632, 3632])
-    else:
-        document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
-        matrix = snapshot["calculation"]["quarterly_matrix"]
-        performance = document.add_table(rows=1, cols=6)
-        performance.style = "Table Grid"
-        headers = ["Year", "Q1", "Q2", "Q3", "Q4", "YTD"]
-        for cell, label in zip(performance.rows[0].cells, headers, strict=True):
-            cell.text = label
-        for year, values in sorted(matrix.items()):
-            cells = performance.add_row().cells
-            row_values = [year] + [
-                values[key]["display"] for key in ("q1", "q2", "q3", "q4", "ytd")
-            ]
-            for cell, value in zip(cells, row_values, strict=True):
-                cell.text = str(value)
-        _set_table_geometry(performance, [1120, 1748, 1748, 1748, 1748, 1752])
+    document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
+    matrix = snapshot["calculation"]["quarterly_matrix"]
+    performance = document.add_table(rows=1, cols=6)
+    performance.style = "Table Grid"
+    headers = ["Year", "Q1", "Q2", "Q3", "Q4", "YTD"]
+    for cell, label in zip(performance.rows[0].cells, headers, strict=True):
+        cell.text = label
+    for year, values in sorted(matrix.items()):
+        cells = performance.add_row().cells
+        row_values = [year] + [values[key]["display"] for key in ("q1", "q2", "q3", "q4", "ytd")]
+        for cell, value in zip(cells, row_values, strict=True):
+            cell.text = str(value)
+    _set_table_geometry(performance, [1120, 1748, 1748, 1748, 1748, 1752])
     _repeat_header(performance.rows[0])
     _style_table_text(performance, "394B59")
     for cell in performance.rows[0].cells:
@@ -843,10 +823,7 @@ def generate_report_files(report: QuarterlyReport, actor=None) -> list[Generated
         report_slug = "monthly-report" if report.report_type == "MONTHLY" else "quarterly-report"
         docx_path = output_dir / f"{report_slug}.docx"
         generate_nav_chart(snapshot, chart_path)
-        if (
-            report.fund.custom_docx_template
-            and report.report_type == QuarterlyReport.ReportType.QUARTERLY
-        ):
+        if report.fund.custom_docx_template:
             build_custom_docx(
                 snapshot,
                 chart_path,
