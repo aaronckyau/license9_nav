@@ -7,15 +7,15 @@
   <section><h2>投資目標</h2><p>{{ snapshot.fund.investment_objective }}</p></section>
   <section><h2>策略重點及特點</h2><ul>{% for item in snapshot.fund.strategies %}<li>{{ item }}</li>{% endfor %}</ul></section>
   {% if report.report_type == "MONTHLY" %}
-  <section class="table-wrap"><h2>基金表現－每月淨回報</h2><table><thead><tr><th>月份</th><th>每股 NAV</th><th>每月回報</th></tr></thead><tbody>{% for row in snapshot.calculation.monthly %}<tr><td>{{ row.valuation_month }}</td><td>{{ row.nav_display|default:row.nav|nav_display:2 }}</td><td>{{ row.return_display }}</td></tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
+  <section class="table-wrap"><h2>基金表現－每月淨回報</h2><table><thead><tr><th>月份</th><th>每股 NAV</th><th>每月回報</th></tr></thead><tbody>{% for row in snapshot.calculation.monthly %}<tr><td>{{ row.valuation_month }}</td><td>{{ row.nav_display|default:row.nav|nav_display:2 }}</td><td>{{ row.return_display }}</td></tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note and snapshot.fund.performance_note != 'Note: Please refer to the fund offering documents for a detailed fee structure.' %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
   {% else %}
-  <section class="table-wrap quarterly-table"><h2>基金表現－季度淨回報</h2><table><thead><tr><th>年度</th><th>第一季</th><th>第二季</th><th>第三季</th><th>第四季</th><th>年初至今</th></tr></thead><tbody>{% for year, row in snapshot.calculation.quarterly_matrix.items %}<tr><th>{{ year }}</th>{% for key, value in row.items %}<td>{{ value.display }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
+  <section class="table-wrap quarterly-table"><h2>基金表現－季度淨回報</h2><table><thead><tr><th>年度</th><th>第一季</th><th>第二季</th><th>第三季</th><th>第四季</th><th>年初至今</th></tr></thead><tbody>{% for year, row in snapshot.calculation.quarterly_matrix.items %}<tr><th>{{ year }}</th>{% for key, value in row.items %}<td>{{ value.display }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% if snapshot.fund.performance_note and snapshot.fund.performance_note != 'Note: Please refer to the fund offering documents for a detailed fee structure.' %}<p class="muted">{{ snapshot.fund.performance_note }}</p>{% endif %}</section>
   {% endif %}
   <section><h2>每股 NAV</h2><img class="report-chart" src="{% url 'report-chart' report.pk %}" alt="每股 NAV 圖表"></section>
   <section><h2>基金統計數據</h2><div class="metric-grid">{% for key, value in snapshot.calculation.metrics_display.items %}<div class="metric-card"><p>{{ key|metric_label }}</p><strong>{{ value }}</strong></div>{% endfor %}</div></section>
   <section><h2>基金經理評論</h2>{{ commentary_html }}</section>
   <section><h2>一般資料</h2><dl class="definition-grid">{% for item in snapshot.fund.parties %}<dt>{{ item.label }}</dt><dd>{{ item.value }}</dd>{% endfor %}{% for item in snapshot.fund.terms %}<dt>{{ item.label }}</dt><dd>{{ item.value }}</dd>{% endfor %}</dl></section>
   <section><h2>聯絡資料</h2>{% for item in snapshot.fund.contacts %}<p><strong>{{ item.role }}：{{ item.name }}</strong><br>{{ item.email }} {{ item.phone }}<br>{{ item.address }}</p>{% endfor %}</section>
-  <section class="disclaimer"><h2>免責聲明</h2>{{ snapshot.fund.disclaimer|linebreaks }}<p><strong>計算公式：</strong> {{ snapshot.formula_version }}{% if snapshot.rfr %} · <strong>無風險利率：</strong> {{ snapshot.rfr.provider }} / {{ snapshot.rfr.series }}{% endif %}</p></section>
+  <section class="disclaimer"><h2>免責聲明</h2>{{ snapshot.fund.disclaimer|linebreaks }}</section>
 </article>{% endif %}
 {% endblock %}

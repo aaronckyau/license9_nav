@@ -1,5 +1,12 @@
 # Implementation Status
 
+## 2026-07-21 報告品牌與頁尾更新
+
+- XSQ 內建 DOCX 報告改用使用者提供的 Aureum Infinity 標誌；其他基金仍保留既有的基金／機構標誌設定。
+- 移除報告中的 Calculation and provenance 文字，以及舊有的詳細費用結構附註。
+- 頁尾統一只顯示動態頁碼（Page 1、Page 2 等）。
+- 使用 Microsoft Word 唯讀 COM 匯出 PDF，完成四頁 XSQ 2026 Q2 報告的視覺驗證；此工具僅作本機 QA，正式環境仍使用容器內 LibreOffice。
+
 最後更新：2026-07-21
 
 ## 狀態

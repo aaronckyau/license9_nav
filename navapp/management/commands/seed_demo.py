@@ -1,7 +1,6 @@
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from zipfile import ZipFile
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -58,16 +57,13 @@ class Command(BaseCommand):
         org.default_disclaimer = DISCLAIMER
         org.disclaimer_version = "XSQ reference 2026-Q1"
         org.save()
-        newsletter = options["newsletter"]
-        if newsletter.is_file() and not org.default_logo:
-            with ZipFile(newsletter) as archive:
-                images = sorted(
-                    name for name in archive.namelist() if name.startswith("word/media/")
-                )
-                if images:
-                    name = Path(images[0]).name
-                    org.default_logo.save(name, ContentFile(archive.read(images[0])), save=True)
-
+        logo_path = Path(settings.BASE_DIR) / "navapp" / "assets" / "aureum-infinity-logo.png"
+        if logo_path.is_file():
+            org.default_logo.save(
+                logo_path.name,
+                ContentFile(logo_path.read_bytes()),
+                save=True,
+            )
         fund, _ = Fund.objects.update_or_create(
             short_code="xsq",
             defaults={
@@ -82,10 +78,7 @@ class Command(BaseCommand):
                     "A unique long-short trading strategy across various asset classes to "
                     "achieve medium-term risk-adjusted returns."
                 ),
-                "performance_note": (
-                    "Note: Please refer to the fund offering documents for a detailed fee "
-                    "structure."
-                ),
+                "performance_note": "",
             },
         )
         strategies = [

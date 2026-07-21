@@ -57,6 +57,13 @@ REQUIRED_CUSTOM_PLACEHOLDERS = {
     "disclaimer",
 }
 
+LEGACY_FEE_STRUCTURE_NOTE = (
+    "Note: Please refer to the fund offering documents for a detailed fee structure."
+)
+AUREUM_INFINITY_LOGO_PATH = (
+    Path(settings.BASE_DIR) / "navapp" / "assets" / "aureum-infinity-logo.png"
+)
+
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -159,8 +166,7 @@ def audit_docx_package(path: Path) -> dict[str, object]:
             drawing_count >= 1,
             bool(table_widths) and all(width == 9864 for width in table_widths),
             not fixed_row_heights,
-            bool(footer_texts)
-            and all("Report " in text and "Generated " in text for text in footer_texts),
+            bool(footer_texts) and all(text.startswith("Page ") for text in footer_texts),
             bool(metadata["title"]),
             "formula=legacy_excel_v1" in metadata["keywords"],
         )
@@ -483,18 +489,10 @@ def _style_table_text(table, header_fill: str = "E8EEF5") -> None:
                     run.bold = row_index == 0
 
 
-def _write_footer(paragraph, snapshot: dict[str, object]) -> None:
+def _write_footer(paragraph) -> None:
     paragraph.clear()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    identity = snapshot["identity"]
-    generated_at = datetime.fromisoformat(str(snapshot["captured_at"])).strftime(
-        "%Y-%m-%d %H:%M UTC"
-    )
-    run = paragraph.add_run(
-        f"{identity['fund_short_code']} | Report {identity['report_id']} | "
-        f"{identity['period_label_en']} | "
-        f"Generated {generated_at} | Page "
-    )
+    run = paragraph.add_run("Page ")
     _set_run_font(run, size=8, color=RGBColor(100, 112, 125))
     field_run = paragraph.add_run()
     _set_run_font(field_run, size=8, color=RGBColor(100, 112, 125))
@@ -503,17 +501,30 @@ def _write_footer(paragraph, snapshot: dict[str, object]) -> None:
     instr = OxmlElement("w:instrText")
     instr.set(qn("xml:space"), "preserve")
     instr.text = " PAGE "
+    field_separator = OxmlElement("w:fldChar")
+    field_separator.set(qn("w:fldCharType"), "separate")
+    field_result = OxmlElement("w:t")
+    field_result.text = "1"
     field_end = OxmlElement("w:fldChar")
     field_end.set(qn("w:fldCharType"), "end")
-    field_run._r.extend([field_begin, instr, field_end])
+    field_run._r.extend([field_begin, instr, field_separator, field_result, field_end])
 
 
-def _add_footer(document: Document, snapshot: dict[str, object]) -> None:
+def _add_footer(document: Document) -> None:
     document.settings.odd_and_even_pages_header_footer = False
     section = document.sections[0]
     section.different_first_page_header_footer = False
     for footer in (section.footer, section.even_page_footer, section.first_page_footer):
-        _write_footer(footer.paragraphs[0], snapshot)
+        _write_footer(footer.paragraphs[0])
+
+
+def _report_logo_path(snapshot: dict[str, object]) -> Path | None:
+    """Return the requested Aureum Infinity mark for XSQ, otherwise the configured logo."""
+    identity = snapshot["identity"]
+    if str(identity["fund_short_code"]).lower() == "xsq" and AUREUM_INFINITY_LOGO_PATH.is_file():
+        return AUREUM_INFINITY_LOGO_PATH
+    logo_path = Path(str(snapshot["fund"]["logo_path"])) if snapshot["fund"]["logo_path"] else None
+    return logo_path if logo_path and logo_path.is_file() else None
 
 
 def _add_commentary(document: Document, markdown_value: str) -> list:
@@ -560,12 +571,12 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     colour_hex = str(snapshot["fund"]["brand_colour"] or "#183B73").lstrip("#")
     colour = RGBColor.from_string(colour_hex.upper())
     _configure_styles(document, colour)
-    _add_footer(document, snapshot)
+    _add_footer(document)
 
     fund = snapshot["fund"]
     share = snapshot["share_class"]
-    logo_path = Path(str(fund["logo_path"])) if fund["logo_path"] else None
-    if logo_path and logo_path.is_file():
+    logo_path = _report_logo_path(snapshot)
+    if logo_path:
         logo = document.add_paragraph()
         logo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         logo.paragraph_format.space_after = Pt(3)
@@ -640,7 +651,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for cell in performance.rows[0].cells:
         for run in cell.paragraphs[0].runs:
             run.font.color.rgb = RGBColor(255, 255, 255)
-    if fund["performance_note"]:
+    if fund["performance_note"] and fund["performance_note"] != LEGACY_FEE_STRUCTURE_NOTE:
         note = document.add_paragraph(str(fund["performance_note"]))
         note.paragraph_format.space_before = Pt(4)
         for run in note.runs:
@@ -735,14 +746,6 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for paragraph_text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if paragraph_text.strip():
             document.add_paragraph(paragraph_text.strip(), style="Disclaimer")
-    provenance = document.add_paragraph(style="Disclaimer")
-    rfr = snapshot.get("rfr") or {}
-    provenance.add_run("Calculation and provenance: ").bold = True
-    provenance.add_run(
-        f"{snapshot['formula_version']} | Report ID {identity['report_id']} | "
-        f"Snapshot {snapshot['captured_at']}"
-        + (f" | RFR {rfr.get('provider')} / {rfr.get('series')}" if rfr else "")
-    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
 

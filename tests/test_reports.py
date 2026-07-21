@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import shutil
 from datetime import date
 from decimal import Decimal
@@ -117,6 +118,7 @@ def test_docx_package_contains_sections_table_values_chart_and_no_excel_links(re
     assert "Manager Commentary" in text
     assert "Fund-specific legal disclaimer" in text
     assert "Professional investors only - fund override" in text
+    assert "Calculation and provenance:" not in text
     section_positions = [
         text.index(label)
         for label in (
@@ -148,6 +150,31 @@ def test_docx_package_contains_sections_table_values_chart_and_no_excel_links(re
     assert package_audit["missing_relationship_targets"] == []
     assert package_audit["embedded_spreadsheets"] == []
     assert len(package_audit["footer_texts"]) == 3
+    assert package_audit["footer_texts"] == ["Page 1", "Page 1", "Page 1"]
+
+
+@pytest.mark.django_db
+def test_xsq_report_uses_the_packaged_aureum_logo_and_omits_legacy_fee_note(report_fixture):
+    report, _, tmp_path = report_fixture
+    report.fund.short_code = "xsq"
+    report.fund.performance_note = (
+        "Note: Please refer to the fund offering documents for a detailed fee structure."
+    )
+    report.fund.save(update_fields=["short_code", "performance_note", "updated_at"])
+
+    _, output = _build_docx(report, tmp_path)
+    document = Document(output)
+    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    asset = Path(reports.AUREUM_INFINITY_LOGO_PATH)
+
+    assert "detailed fee structure" not in text
+    with ZipFile(output) as package:
+        embedded_hashes = {
+            hashlib.sha256(package.read(name)).hexdigest()
+            for name in package.namelist()
+            if name.startswith("word/media/")
+        }
+    assert hashlib.sha256(asset.read_bytes()).hexdigest() in embedded_hashes
 
 
 @pytest.mark.django_db
