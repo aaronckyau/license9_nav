@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from docx import Document
+from docx.oxml.ns import qn
 
 from navapp.models import (
     Fund,
@@ -300,6 +301,20 @@ def test_builtin_docx_uses_simplified_chinese_system_copy(report_fixture):
     assert "免责声明" in text
     assert "年度" in table_text
     assert "年初至今" in table_text
+
+
+@pytest.mark.django_db
+def test_builtin_docx_sets_the_selected_cjk_font_on_user_commentary(report_fixture):
+    report, _, tmp_path = report_fixture
+    report.report_language = QuarterlyReport.ReportLanguage.SIMPLIFIED_CHINESE
+    report.commentary_markdown = "简体中文评论必须使用 CJK 字型。"
+    report.save(update_fields=["report_language", "commentary_markdown", "updated_at"])
+
+    _, output = _build_docx(report, tmp_path)
+    document = Document(output)
+    paragraph = next(item for item in document.paragraphs if "简体中文评论" in item.text)
+
+    assert paragraph.runs[0]._element.rPr.rFonts.get(qn("w:eastAsia")) == "Noto Sans CJK SC"
 
 
 @pytest.mark.django_db

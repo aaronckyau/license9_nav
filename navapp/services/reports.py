@@ -650,7 +650,7 @@ def _repeat_header(row) -> None:
     tr_pr.append(node)
 
 
-def _style_table_text(table, header_fill: str = "E8EEF5") -> None:
+def _style_table_text(table, cjk_font: str, header_fill: str = "E8EEF5") -> None:
     for row_index, row in enumerate(table.rows):
         for cell in row.cells:
             if row_index == 0:
@@ -659,7 +659,7 @@ def _style_table_text(table, header_fill: str = "E8EEF5") -> None:
                 paragraph.paragraph_format.space_before = Pt(0)
                 paragraph.paragraph_format.space_after = Pt(0)
                 for run in paragraph.runs:
-                    _set_run_font(run, size=9.5)
+                    _set_run_font(run, size=9.5, east_asia=cjk_font)
                     run.bold = row_index == 0
 
 
@@ -701,7 +701,7 @@ def _report_logo_path(snapshot: dict[str, object]) -> Path | None:
     return logo_path if logo_path and logo_path.is_file() else None
 
 
-def _add_commentary(document: Document, markdown_value: str) -> list:
+def _add_commentary(document: Document, markdown_value: str, cjk_font: str) -> list:
     paragraphs = []
     for block in parse_commentary(markdown_value):
         style = {
@@ -713,6 +713,7 @@ def _add_commentary(document: Document, markdown_value: str) -> list:
         paragraphs.append(paragraph)
         for segment in block.segments:
             run = paragraph.add_run(segment.text)
+            _set_run_font(run, east_asia=cjk_font)
             run.bold = segment.bold
             run.italic = segment.italic
     return paragraphs
@@ -781,10 +782,12 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     p_pr.append(p_bdr)
 
     document.add_heading(copy["investment_objective"], level=1)
-    document.add_paragraph(str(fund["investment_objective"]))
+    objective = document.add_paragraph()
+    _set_run_font(objective.add_run(str(fund["investment_objective"])), east_asia=cjk_font)
     document.add_heading(copy["strategy_highlights"], level=1)
     for strategy in fund["strategies"]:
-        document.add_paragraph(str(strategy), style="List Bullet")
+        paragraph = document.add_paragraph(style="List Bullet")
+        _set_run_font(paragraph.add_run(str(strategy)), east_asia=cjk_font)
 
     document.add_heading(copy["fund_performance"], level=1)
     matrix = snapshot["calculation"]["quarterly_matrix"]
@@ -800,7 +803,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
             cell.text = str(value)
     _set_table_geometry(performance, [1120, 1748, 1748, 1748, 1748, 1752])
     _repeat_header(performance.rows[0])
-    _style_table_text(performance, "394B59")
+    _style_table_text(performance, cjk_font, "394B59")
     for cell in performance.rows[0].cells:
         for run in cell.paragraphs[0].runs:
             run.font.color.rgb = RGBColor(255, 255, 255)
@@ -844,21 +847,25 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         row[1].text = str(value)
     _set_table_geometry(stats, [6000, 3864])
     _repeat_header(stats.rows[0])
-    _style_table_text(stats)
+    _style_table_text(stats, cjk_font)
 
     document.add_heading(copy["manager_commentary"], level=1)
     if snapshot["commentary"]["title"]:
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_with_next = True
         run = paragraph.add_run(str(snapshot["commentary"]["title"]))
+        _set_run_font(run, east_asia=cjk_font)
         run.bold = True
-    commentary_paragraphs = _add_commentary(document, str(snapshot["commentary"]["markdown"]))
+    commentary_paragraphs = _add_commentary(
+        document, str(snapshot["commentary"]["markdown"]), cjk_font
+    )
     if snapshot["commentary"]["author"]:
         if commentary_paragraphs:
             commentary_paragraphs[-1].paragraph_format.keep_with_next = True
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_together = True
         run = paragraph.add_run(f"— {snapshot['commentary']['author']}")
+        _set_run_font(run, east_asia=cjk_font)
         run.italic = True
 
     document.add_page_break()
@@ -881,7 +888,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         row[1].text = str(value)
     _set_table_geometry(general, [3000, 6864])
     _repeat_header(general.rows[0])
-    _style_table_text(general)
+    _style_table_text(general, cjk_font)
 
     document.add_heading(copy["contacts"], level=1)
     contacts = document.add_table(rows=1, cols=2)
@@ -895,13 +902,14 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         row[1].text = "\n".join(str(value) for value in details if value)
     _set_table_geometry(contacts, [3000, 6864])
     _repeat_header(contacts.rows[0])
-    _style_table_text(contacts)
+    _style_table_text(contacts, cjk_font)
 
     document.add_page_break()
     document.add_heading(copy["disclaimer"], level=1)
     for paragraph_text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if paragraph_text.strip():
-            document.add_paragraph(paragraph_text.strip(), style="Disclaimer")
+            paragraph = document.add_paragraph(style="Disclaimer")
+            _set_run_font(paragraph.add_run(paragraph_text.strip()), east_asia=cjk_font)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
 
