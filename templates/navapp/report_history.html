@@ -11,15 +11,20 @@
 
 <section class="panel report-period-selector" aria-labelledby="report-period-title">
   <div class="section-heading"><div><h2 id="report-period-title">選擇報告期間</h2><p class="muted">月報可選任何已完成月份；季報請選 3、6、9 或 12 月。</p></div></div>
-  <form method="post" action="{% url 'report-create' %}" class="report-period-form">{% csrf_token %}
+  {% if period_form %}
+  <form method="post" action="{% url 'report-create' %}{% if report %}?report={{ report.pk }}{% elif scope_share_class %}?share_class={{ scope_share_class.pk }}{% endif %}" class="report-period-form">{% csrf_token %}
+    <p class="muted">目前基金：<strong>{{ scope_share_class.fund.display_name }}</strong>。股份類別只限此基金。</p>
     <div class="field">{{ period_form.share_class.label_tag }}{{ period_form.share_class }}{{ period_form.share_class.errors }}</div>
     <div class="field">{{ period_form.report_type.label_tag }}{{ period_form.report_type }}{{ period_form.report_type.errors }}</div>
-    <div class="field">{{ period_form.report_language.label_tag }}{{ period_form.report_language }}{{ period_form.report_language.errors }}</div>
     <div class="field">{{ period_form.year.label_tag }}{{ period_form.year }}{{ period_form.year.errors }}</div>
     <div class="field"><label id="report-period-label" for="{{ period_form.month.id_for_label }}">截止月份：</label>{{ period_form.month }}{{ period_form.month.errors }}</div>
     <button class="button primary" type="submit">選擇並填寫評論</button>
     {{ period_form.non_field_errors }}
   </form>
+  {% else %}
+    <p class="muted">請先在步驟 0 選擇基金，並從該基金的 NAV 頁進入這裡。</p>
+    <a class="button primary" href="{% url 'dashboard' %}">選擇基金</a>
+  {% endif %}
 </section>
 
 <script>

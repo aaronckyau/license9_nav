@@ -598,8 +598,16 @@ def bulk_import(request, pk):
 
 @login_required
 def report_create(request):
+    share_class_scope = _report_share_class_scope(request)
+    if share_class_scope is None:
+        messages.error(request, "請先從基金的 NAV 頁進入「評論及產生報告」。")
+        return redirect("dashboard")
     if request.method == "POST":
-        form = ReportCreateForm(request.POST)
+        form = ReportCreateForm(
+            request.POST,
+            fund=share_class_scope.fund,
+            preferred_share_class=share_class_scope,
+        )
         if form.is_valid():
             share_class = form.cleaned_data["share_class"]
             year = form.cleaned_data["year"]
@@ -620,7 +628,7 @@ def report_create(request):
                 fund=share_class.fund,
                 share_class=share_class,
                 report_type=report_type,
-                report_language=form.cleaned_data["report_language"],
+                report_language=_report_language_for_fund(share_class.fund),
                 year=year,
                 report_month=form.cleaned_data["month"],
                 quarter=form.cleaned_data["quarter"],
@@ -637,10 +645,37 @@ def report_create(request):
             report.full_clean()
             report.save()
             return redirect(f"{reverse('report-history')}?report={report.pk}")
-        return _render_report_history(request, report_create_form=form)
+        return _render_report_history(
+            request,
+            request.GET.get("report", ""),
+            request.GET.get("share_class", ""),
+            report_create_form=form,
+        )
     else:
-        form = ReportCreateForm()
-    return render(request, "navapp/generic_form.html", {"form": form, "title": "選擇報告期間"})
+        return redirect(f"{reverse('report-history')}?share_class={share_class_scope.pk}")
+
+
+def _report_language_for_fund(fund: Fund) -> str:
+    if fund.report_language in QuarterlyReport.ReportLanguage.values:
+        return fund.report_language
+    return QuarterlyReport.ReportLanguage.TRADITIONAL_CHINESE
+
+
+def _report_share_class_scope(request) -> ShareClass | None:
+    report_id = request.GET.get("report", "")
+    if report_id.isdigit():
+        return get_object_or_404(
+            QuarterlyReport.objects.select_related("share_class"), pk=int(report_id)
+        ).share_class
+    share_class_id = request.GET.get("share_class", "")
+    if share_class_id.isdigit():
+        return get_object_or_404(
+            ShareClass.objects.select_related("fund"),
+            pk=int(share_class_id),
+            is_active=True,
+            fund__is_active=True,
+        )
+    return None
 
 
 def _report_snapshot_for_display(report: QuarterlyReport) -> dict[str, object]:
@@ -808,6 +843,7 @@ def report_chart(request, pk):
 
 def _report_history_context(
     selected_report: str = "",
+    selected_share_class: str = "",
     bound_commentary_form: ReportHistoryCommentaryForm | None = None,
     report_create_form: ReportCreateForm | None = None,
 ) -> dict[str, object]:
@@ -852,14 +888,29 @@ def _report_history_context(
             ),
             None,
         )
+    elif selected_share_class.isdigit():
+        active_report = next(
+            (item for item in reports if item.share_class_id == int(selected_share_class)),
+            None,
+        )
     else:
         active_report = reports[0] if reports else None
+    scope_share_class = active_report.share_class if active_report else None
+    if scope_share_class is None and selected_share_class.isdigit():
+        scope_share_class = (
+            ShareClass.objects.filter(
+                pk=int(selected_share_class),
+                is_active=True,
+                fund__is_active=True,
+            )
+            .select_related("fund")
+            .first()
+        )
     period_initial = {}
     if active_report:
         period_initial = {
             "share_class": active_report.share_class_id,
             "report_type": active_report.report_type,
-            "report_language": active_report.report_language,
             "year": active_report.year,
             "month": active_report.report_month,
         }
@@ -867,20 +918,36 @@ def _report_history_context(
         "reports": [active_report] if active_report else [],
         "selected_report": str(active_report.pk) if active_report else "",
         "report": active_report,
-        "period_form": report_create_form or ReportCreateForm(initial=period_initial),
+        "scope_share_class": scope_share_class,
+        "period_form": report_create_form
+        or (
+            ReportCreateForm(
+                initial=period_initial,
+                fund=scope_share_class.fund,
+                preferred_share_class=scope_share_class,
+            )
+            if scope_share_class
+            else None
+        ),
     }
 
 
 def _render_report_history(
     request,
     selected_report: str = "",
+    selected_share_class: str = "",
     bound_commentary_form: ReportHistoryCommentaryForm | None = None,
     report_create_form: ReportCreateForm | None = None,
 ):
     return render(
         request,
         "navapp/report_history.html",
-        _report_history_context(selected_report, bound_commentary_form, report_create_form),
+        _report_history_context(
+            selected_report,
+            selected_share_class,
+            bound_commentary_form,
+            report_create_form,
+        ),
     )
 
 
@@ -898,7 +965,11 @@ def report_generate(request, pk):
             auto_id=f"id_report_{report.pk}_%s",
         )
         if not commentary_form.is_valid():
-            return _render_report_history(request, str(report.pk), commentary_form)
+            return _render_report_history(
+                request,
+                str(report.pk),
+                bound_commentary_form=commentary_form,
+            )
         before_commentary = report.commentary_markdown
         with transaction.atomic():
             report = commentary_form.save(commit=False)
@@ -959,7 +1030,8 @@ def report_finalize(request, pk):
 @login_required
 def report_history(request):
     selected_report = request.GET.get("report", "")
-    return _render_report_history(request, selected_report)
+    selected_share_class = request.GET.get("share_class", "")
+    return _render_report_history(request, selected_report, selected_share_class)
 
 
 @login_required

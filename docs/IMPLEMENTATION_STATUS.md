@@ -1,5 +1,10 @@
 # Implementation Status
 
+## 2026-07-22 報告頁基金範圍化（本機驗證完成）
+
+- 報告期間選擇器改以目前報告或 NAV 頁帶入的股份類別鎖定基金範圍；不再讓使用者從清單選到其他基金的股份類別，亦移除「報告文字」欄位。
+- 新增回歸測試涵蓋同一基金範圍、跨基金 POST 拒絕、無既有報告的基金範圍及基金預設報告語言。完整測試、Ruff、Django system check 與 migration check 已於本機通過；發布流程進行中。
+
 ## 2026-07-22 Boya Quant LPF 資料匯入（已完成）
 
 - 已完成使用者提供的 `Boya Data till 202605.xlsx` 與 `Boya Quant LPF Monthly Newsletter 202605.docx` 的只讀結構核對。將只匯入本基金的 2025-11 成立 NAV 及 2025-12 至 2026-05 NAV；活頁簿中 2022–2024 的舊資料與本基金成立日不符，不會混入。

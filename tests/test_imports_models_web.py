@@ -765,8 +765,9 @@ def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_
         currency="USD",
     )
 
+    report_create_url = f"{reverse('report-create')}?share_class={share.pk}"
     monthly = client.post(
-        reverse("report-create"),
+        report_create_url,
         {
             "share_class": share.pk,
             "report_type": "MONTHLY",
@@ -785,7 +786,7 @@ def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_
     assert monthly.url == f"{reverse('report-history')}?report={monthly_report.pk}"
 
     repeated_monthly = client.post(
-        reverse("report-create"),
+        report_create_url,
         {
             "share_class": share.pk,
             "report_type": "MONTHLY",
@@ -805,7 +806,7 @@ def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_
     )
 
     invalid_quarter = client.post(
-        reverse("report-create"),
+        report_create_url,
         {
             "share_class": share.pk,
             "report_type": "QUARTERLY",
@@ -817,7 +818,7 @@ def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_
     assert "季報截止月份必須是 3、6、9 或 12 月" in invalid_quarter.content.decode()
 
     quarterly = client.post(
-        reverse("report-create"),
+        report_create_url,
         {
             "share_class": share.pk,
             "report_type": "QUARTERLY",
@@ -834,6 +835,102 @@ def test_user_can_choose_monthly_or_quarterly_report_period(client, django_user_
     assert quarterly_report.report_month == 3
     assert quarterly_report.quarter == 1
     assert quarterly.url == f"{reverse('report-history')}?report={quarterly_report.pk}"
+
+
+@pytest.mark.django_db
+def test_report_period_selector_is_scoped_to_the_current_fund_and_hides_language(
+    client, django_user_model
+):
+    user = django_user_model.objects.create_user("scoped-report-user", password="safe-password")
+    client.force_login(user)
+    fund_a = Fund.objects.create(
+        legal_name="Scoped Fund A LPF",
+        display_name="Scoped Fund A",
+        short_code="scoped-a",
+        structure="LPF",
+        domicile="Hong Kong",
+        report_language=QuarterlyReport.ReportLanguage.SIMPLIFIED_CHINESE,
+        investment_objective="Scoped objective A",
+    )
+    fund_b = Fund.objects.create(
+        legal_name="Scoped Fund B LPF",
+        display_name="Scoped Fund B",
+        short_code="scoped-b",
+        structure="LPF",
+        domicile="Hong Kong",
+        investment_objective="Scoped objective B",
+    )
+    share_a = ShareClass.objects.create(
+        fund=fund_a,
+        name="Class A",
+        code="a",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    share_b = ShareClass.objects.create(
+        fund=fund_b,
+        name="Class B",
+        code="b",
+        inception_date=date(2024, 1, 1),
+        inception_nav=Decimal("100"),
+        currency="USD",
+    )
+    current_report = QuarterlyReport.objects.create(
+        fund=fund_a,
+        share_class=share_a,
+        report_type=QuarterlyReport.ReportType.MONTHLY,
+        report_language=QuarterlyReport.ReportLanguage.SIMPLIFIED_CHINESE,
+        year=2024,
+        report_month=1,
+        quarter=1,
+        report_date=date(2024, 1, 31),
+    )
+    scoped_url = f"{reverse('report-history')}?report={current_report.pk}"
+
+    response = client.get(scoped_url)
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "Scoped Fund A" in body
+    assert "scoped-b / Class B" not in body
+    assert "報告文字" not in body
+    assert f"{reverse('report-create')}?report={current_report.pk}" in body
+
+    response = client.get(f"{reverse('report-history')}?share_class={share_b.pk}")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "目前基金：<strong>Scoped Fund B</strong>" in body
+    assert "scoped-a / Class A" not in body
+    assert f"{reverse('report-create')}?share_class={share_b.pk}" in body
+
+    response = client.post(
+        f"{reverse('report-create')}?report={current_report.pk}",
+        {
+            "share_class": share_b.pk,
+            "report_type": "MONTHLY",
+            "year": "2024",
+            "month": "2",
+        },
+    )
+
+    assert response.status_code == 200
+    assert not QuarterlyReport.objects.filter(share_class=share_b).exists()
+
+    response = client.post(
+        f"{reverse('report-create')}?report={current_report.pk}",
+        {
+            "share_class": share_a.pk,
+            "report_type": "MONTHLY",
+            "year": "2024",
+            "month": "2",
+        },
+    )
+
+    assert response.status_code == 302
+    created = QuarterlyReport.objects.get(share_class=share_a, report_date=date(2024, 2, 29))
+    assert created.report_language == QuarterlyReport.ReportLanguage.SIMPLIFIED_CHINESE
 
 
 @pytest.mark.django_db
@@ -1067,7 +1164,7 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
     assert duplicate_response.status_code == 200
     assert "該月份已有 NAV 紀錄" in duplicate_response.content.decode()
     response = client.post(
-        reverse("report-create"),
+        f"{reverse('report-create')}?share_class={share.pk}",
         {
             "share_class": share.pk,
             "report_type": "QUARTERLY",

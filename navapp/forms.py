@@ -592,12 +592,6 @@ class ReportCreateForm(forms.Form):
             (QuarterlyReport.ReportType.QUARTERLY, "季報"),
         ),
     )
-    report_language = forms.ChoiceField(
-        label="報告文字",
-        choices=QuarterlyReport.ReportLanguage.choices,
-        initial=QuarterlyReport.ReportLanguage.TRADITIONAL_CHINESE,
-        required=False,
-    )
     year = forms.IntegerField(label="報告年度", min_value=1900, max_value=9999)
     month = forms.TypedChoiceField(
         label="截止月份",
@@ -605,21 +599,21 @@ class ReportCreateForm(forms.Form):
         coerce=int,
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fund=None, preferred_share_class=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["share_class"].queryset = ShareClass.objects.filter(
+        share_classes = ShareClass.objects.filter(
             is_active=True,
             fund__is_active=True,
         ).select_related("fund")
+        if fund is not None:
+            share_classes = share_classes.filter(fund=fund)
+            self.fields["share_class"].empty_label = None
+        self.fields["share_class"].queryset = share_classes
+        if preferred_share_class is not None:
+            self.fields["share_class"].initial = preferred_share_class.pk
         completed = latest_completed_month()
         self.fields["year"].initial = completed.year
         self.fields["month"].initial = completed.month
-
-    def clean_report_language(self):
-        return (
-            self.cleaned_data["report_language"]
-            or QuarterlyReport.ReportLanguage.TRADITIONAL_CHINESE
-        )
 
     def clean(self):
         cleaned = super().clean()
