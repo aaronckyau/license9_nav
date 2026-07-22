@@ -3,7 +3,7 @@
 ## 2026-07-22 報告頁基金範圍化（本機驗證完成）
 
 - 報告期間選擇器改以目前報告或 NAV 頁帶入的股份類別鎖定基金範圍；不再讓使用者從清單選到其他基金的股份類別，亦移除「報告文字」欄位。
-- 新增回歸測試涵蓋同一基金範圍、跨基金 POST 拒絕、無既有報告的基金範圍及基金預設報告語言。完整測試、Ruff、Django system check 與 migration check 已於本機通過；發布流程進行中。
+- 新增回歸測試涵蓋同一基金範圍、跨基金 POST 拒絕、無既有報告的基金範圍及基金預設報告語言。完整測試、Ruff、Django system check 與 migration check 已於本機通過，並已於 production 發布；公開 `/nav/healthz`、`/nav/readyz` 與受保護的報告頁入口均已驗證。
 
 ## 2026-07-22 Boya Quant LPF 資料匯入（已完成）
 
