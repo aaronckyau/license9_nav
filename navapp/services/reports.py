@@ -659,7 +659,7 @@ def _style_table_text(table, cjk_font: str, header_fill: str = "E8EEF5") -> None
                 paragraph.paragraph_format.space_before = Pt(0)
                 paragraph.paragraph_format.space_after = Pt(0)
                 for run in paragraph.runs:
-                    _set_run_font(run, size=9.5, east_asia=cjk_font)
+                    _set_run_font(run, name=cjk_font, size=9.5, east_asia=cjk_font)
                     run.bold = row_index == 0
 
 
@@ -713,7 +713,7 @@ def _add_commentary(document: Document, markdown_value: str, cjk_font: str) -> l
         paragraphs.append(paragraph)
         for segment in block.segments:
             run = paragraph.add_run(segment.text)
-            _set_run_font(run, east_asia=cjk_font)
+            _set_run_font(run, name=cjk_font, east_asia=cjk_font)
             run.bold = segment.bold
             run.italic = segment.italic
     return paragraphs
@@ -783,11 +783,13 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
 
     document.add_heading(copy["investment_objective"], level=1)
     objective = document.add_paragraph()
-    _set_run_font(objective.add_run(str(fund["investment_objective"])), east_asia=cjk_font)
+    _set_run_font(
+        objective.add_run(str(fund["investment_objective"])), name=cjk_font, east_asia=cjk_font
+    )
     document.add_heading(copy["strategy_highlights"], level=1)
     for strategy in fund["strategies"]:
         paragraph = document.add_paragraph(style="List Bullet")
-        _set_run_font(paragraph.add_run(str(strategy)), east_asia=cjk_font)
+        _set_run_font(paragraph.add_run(str(strategy)), name=cjk_font, east_asia=cjk_font)
 
     document.add_heading(copy["fund_performance"], level=1)
     matrix = snapshot["calculation"]["quarterly_matrix"]
@@ -854,7 +856,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_with_next = True
         run = paragraph.add_run(str(snapshot["commentary"]["title"]))
-        _set_run_font(run, east_asia=cjk_font)
+        _set_run_font(run, name=cjk_font, east_asia=cjk_font)
         run.bold = True
     commentary_paragraphs = _add_commentary(
         document, str(snapshot["commentary"]["markdown"]), cjk_font
@@ -865,7 +867,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_together = True
         run = paragraph.add_run(f"— {snapshot['commentary']['author']}")
-        _set_run_font(run, east_asia=cjk_font)
+        _set_run_font(run, name=cjk_font, east_asia=cjk_font)
         run.italic = True
 
     document.add_page_break()
@@ -909,7 +911,9 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     for paragraph_text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if paragraph_text.strip():
             paragraph = document.add_paragraph(style="Disclaimer")
-            _set_run_font(paragraph.add_run(paragraph_text.strip()), east_asia=cjk_font)
+            _set_run_font(
+                paragraph.add_run(paragraph_text.strip()), name=cjk_font, east_asia=cjk_font
+            )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
 

@@ -315,7 +315,9 @@ def test_builtin_docx_sets_the_selected_cjk_font_on_user_commentary(report_fixtu
     document = Document(output)
     paragraph = next(item for item in document.paragraphs if "简体中文评论" in item.text)
 
-    assert paragraph.runs[0]._element.rPr.rFonts.get(qn("w:eastAsia")) == "Noto Sans CJK SC"
+    fonts = paragraph.runs[0]._element.rPr.rFonts
+    assert fonts.get(qn("w:eastAsia")) == "Noto Sans CJK SC"
+    assert fonts.get(qn("w:ascii")) == "Noto Sans CJK SC"
 
 
 def test_pdf_conversion_replaces_an_existing_pdf(monkeypatch, settings, tmp_path):
