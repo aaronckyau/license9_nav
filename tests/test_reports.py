@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from docx import Document
 from docx.oxml.ns import qn
+from matplotlib.axes import Axes
 
 from navapp.models import (
     Fund,
@@ -51,6 +52,45 @@ from navapp.services.rfr import set_manual_snapshot
 )
 def test_nav_chart_tick_interval_adapts_to_history_length(point_count, expected_interval):
     assert reports._nav_chart_tick_interval(point_count) == expected_interval
+
+
+def test_nav_chart_aligns_month_end_values_with_their_month_labels(tmp_path, monkeypatch):
+    snapshot = {
+        "identity": {"report_language": "zh-Hant"},
+        "fund": {"brand_colour": "#183B73"},
+        "share_class": {"inception_date": "2025-11-24", "inception_nav": "100.00"},
+        "calculation": {
+            "monthly": [
+                {"valuation_month": "2025-11-30", "nav": "100.00"},
+                {"valuation_month": "2025-12-31", "nav": "99.72"},
+                {"valuation_month": "2026-01-31", "nav": "99.80"},
+                {"valuation_month": "2026-02-28", "nav": "100.85"},
+                {"valuation_month": "2026-03-31", "nav": "92.39"},
+                {"valuation_month": "2026-04-30", "nav": "94.54"},
+                {"valuation_month": "2026-05-31", "nav": "91.39"},
+            ]
+        },
+    }
+    plotted_dates = []
+    original_plot = Axes.plot
+
+    def capture_plot(axis, dates, values, *args, **kwargs):
+        plotted_dates.extend(dates)
+        return original_plot(axis, dates, values, *args, **kwargs)
+
+    monkeypatch.setattr(Axes, "plot", capture_plot)
+
+    generate_nav_chart(snapshot, tmp_path / "may-chart.png")
+
+    assert [value.strftime("%Y-%m-%d") for value in plotted_dates] == [
+        "2025-11-01",
+        "2025-12-01",
+        "2026-01-01",
+        "2026-02-01",
+        "2026-03-01",
+        "2026-04-01",
+        "2026-05-01",
+    ]
 
 
 @pytest.fixture
@@ -435,7 +475,7 @@ def test_boya_performance_matrix_excludes_the_inception_nav_baseline():
         "Trailing 12 Months SD": "12.43%",
         "Rf rate": "4.23%",
         "Sharpe": "-1.807",
-        "Max Drawdown": "-8.39%",
+        "Max Drawdown": "-11.82%",
         "No of data": "7",
         "% Positive Months": "43%",
         "% Negative Months": "57%",

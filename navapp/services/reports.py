@@ -481,10 +481,13 @@ def _nav_chart_tick_interval(point_count: int) -> int:
 
 def generate_nav_chart(snapshot: dict[str, object], output_path: Path) -> None:
     monthly = snapshot["calculation"]["monthly"]
-    dates = [datetime.fromisoformat(row["valuation_month"]) for row in monthly]
+    # Monthly NAV values are stored at month end, while MonthLocator places ticks
+    # at month start. Plot every observation at its month start so the point and
+    # its YYYY-MM label describe the same reporting month.
+    dates = [datetime.fromisoformat(row["valuation_month"]).replace(day=1) for row in monthly]
     values = [float(row["nav"]) for row in monthly]
     inception = snapshot["share_class"]
-    inception_date = datetime.fromisoformat(inception["inception_date"])
+    inception_date = datetime.fromisoformat(inception["inception_date"]).replace(day=1)
     if not dates or inception_date < dates[0]:
         dates.insert(0, inception_date)
         values.insert(0, float(inception["inception_nav"]))
@@ -896,7 +899,7 @@ def _add_boya_statistics(document: Document, snapshot: dict[str, object]) -> Non
         ),
         ("Rf rate", metrics["annual_rfr"]),
         ("Sharpe", metrics["sharpe_ratio"]),
-        ("Max Drawdown", metrics["maximum_monthly_loss"]),
+        ("Max Drawdown", metrics["maximum_drawdown"]),
         ("No of data", str(len(return_values))),
         ("% Positive Months", metrics["positive_months"]),
         ("% Negative Months", metrics["negative_months"]),
