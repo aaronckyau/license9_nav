@@ -95,6 +95,13 @@ def monthly_returns(points: list[NavPoint], inception_nav: Decimal) -> list[Deci
     return returns
 
 
+def is_inception_nav_observation(
+    point: NavPoint, inception_date: date, inception_nav: Decimal
+) -> bool:
+    """Identify the optional record that only records a share class's initial NAV."""
+    return point.valuation_date == inception_date and point.nav == inception_nav
+
+
 def sample_standard_deviation(values: list[Decimal]) -> Decimal | None:
     if len(values) < 2:
         return None
@@ -218,7 +225,10 @@ def calculate_performance(
     inception_nav = _decimal(inception_nav)
     annual_rfr_decimal = _decimal(annual_rfr_decimal) if annual_rfr_decimal is not None else None
     ordered = validate_nav_points(points, inception_date, report_end)
-    returns = monthly_returns(ordered, inception_nav)
+    return_points = ordered
+    if len(ordered) > 1 and is_inception_nav_observation(ordered[0], inception_date, inception_nav):
+        return_points = ordered[1:]
+    returns = monthly_returns(return_points, inception_nav)
     latest = ordered[-1]
     matrix = quarterly_matrix(ordered, inception_nav, report_end)
     latest_quarter = (
@@ -373,18 +383,28 @@ def calculate_performance(
             **details,
         }
 
-    monthly = [
-        {
-            "valuation_month": point.valuation_month.isoformat(),
-            "valuation_date": point.valuation_date.isoformat(),
-            "nav": str(point.nav),
-            "nav_display": format_decimal(point.nav, 2),
-            "revision": point.revision,
-            "return_raw": str(return_value),
-            "return_display": format_percent(return_value, percentage_places),
-        }
-        for point, return_value in zip(ordered, returns, strict=True)
-    ]
+    return_by_month = {
+        point.valuation_month: return_value
+        for point, return_value in zip(return_points, returns, strict=True)
+    }
+    monthly = []
+    for point in ordered:
+        return_value = return_by_month.get(point.valuation_month)
+        monthly.append(
+            {
+                "valuation_month": point.valuation_month.isoformat(),
+                "valuation_date": point.valuation_date.isoformat(),
+                "nav": str(point.nav),
+                "nav_display": format_decimal(point.nav, 2),
+                "revision": point.revision,
+                "return_raw": str(return_value) if return_value is not None else None,
+                "return_display": (
+                    format_percent(return_value, percentage_places)
+                    if return_value is not None
+                    else "—"
+                ),
+            }
+        )
     serial_matrix = {
         year: {
             key: {

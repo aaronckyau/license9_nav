@@ -56,6 +56,58 @@ def test_first_monthly_return_uses_inception_nav():
     assert monthly_returns([point], Decimal("100")) == [Decimal("0.1")]
 
 
+def test_inception_nav_observation_is_not_counted_as_a_monthly_return():
+    values = [
+        "100",
+        "99.71759987515605",
+        "99.79307677902622",
+        "100.84251040799334",
+        "92.38147210657785",
+        "94.53101207327228",
+        "91.38499084096586",
+        "88.92",
+    ]
+    months = [
+        date(2025, 11, 30),
+        date(2025, 12, 31),
+        date(2026, 1, 31),
+        date(2026, 2, 28),
+        date(2026, 3, 31),
+        date(2026, 4, 30),
+        date(2026, 5, 31),
+        date(2026, 6, 30),
+    ]
+    points = [
+        NavPoint(months[0], date(2025, 11, 24), Decimal(values[0])),
+        *[
+            NavPoint(month, month, Decimal(value))
+            for month, value in zip(months[1:], values[1:], strict=True)
+        ],
+    ]
+
+    result = calculate_performance(
+        points=points,
+        inception_nav=Decimal("100"),
+        inception_date=date(2025, 11, 24),
+        report_end=date(2026, 6, 30),
+        annual_rfr_decimal=Decimal("0.0423"),
+    )
+
+    assert result["monthly"][0]["return_raw"] is None
+    assert result["monthly"][0]["return_display"] == "—"
+    assert result["details"]["annualized_return"]["inputs"]["monthly_return_count"] == "7"
+    assert result["metrics_display"]["itd_return"] == "-11.08%"
+    assert result["metrics_display"]["ytd_return"] == "-10.83%"
+    assert result["metrics_display"]["annualized_return"] == "-18.23%"
+    assert result["metrics_display"]["annualized_volatility"] == "12.43%"
+    assert result["metrics_display"]["positive_months"] == "43%"
+    assert result["metrics_display"]["negative_months"] == "57%"
+    assert result["metrics_display"]["maximum_monthly_gain"] == "2.33%"
+    assert result["metrics_display"]["maximum_monthly_loss"] == "-8.39%"
+    assert result["metrics_display"]["sharpe_ratio"] == "-1.807"
+    assert result["metrics_display"]["maximum_drawdown"] == "-11.82%"
+
+
 def test_quarterly_matrix_first_partial_quarter_and_ytd():
     points = [
         NavPoint(date(2024, 2, 29), date(2024, 2, 29), Decimal("102")),

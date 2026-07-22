@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
@@ -37,7 +38,12 @@ from navapp.models import (
     GeneratedFile,
     QuarterlyReport,
 )
-from navapp.services.calculations import CalculationValidationError, calculate_for_report
+from navapp.services.calculations import (
+    CalculationValidationError,
+    calculate_for_report,
+    format_percent,
+    sample_standard_deviation,
+)
 from navapp.services.commentary import parse_commentary
 
 
@@ -853,18 +859,47 @@ def _add_boya_monthly_performance(document: Document, snapshot: dict[str, object
 
 
 def _add_boya_statistics(document: Document, snapshot: dict[str, object]) -> None:
-    document.add_heading("Fund Statistics", level=1)
+    document.add_heading("Performance Matrix", level=1)
     share = snapshot["share_class"]
-    metrics = snapshot["calculation"]["metrics_display"]
+    calculation = snapshot["calculation"]
+    metrics = calculation["metrics_display"]
+    return_values = [
+        Decimal(str(item["return_raw"]))
+        for item in calculation["monthly"]
+        if item["return_raw"] is not None
+    ]
+    monthly_sd = sample_standard_deviation(return_values)
+    trailing_monthly_sd = sample_standard_deviation(return_values[-12:])
+    report_end = date.fromisoformat(str(calculation["report_end"]))
+    inception_date = date.fromisoformat(str(share["inception_date"]))
+    end_date = f"{report_end.month}/{report_end.day}/{report_end.year}"
+    inception_display = f"{inception_date.month}/{inception_date.day}/{inception_date.year}"
+    days = (report_end - inception_date).days
     rows = [
-        ("Inception Date", share["inception_date"]),
-        ("Return ITD", metrics["itd_return"]),
-        ("Return YTD", metrics["ytd_return"]),
+        ("Inception Date", inception_display),
+        ("End Date", end_date),
+        ("ITD", metrics["itd_return"]),
+        ("YTD", metrics["ytd_return"]),
+        ("Monthly SD (inception)", format_percent(monthly_sd, 2)),
+        ("Monthly SD (12 months)", format_percent(trailing_monthly_sd, 2)),
+        ("Days", str(days)),
         ("Annualized Return", metrics["annualized_return"]),
+        ("Max Monthly Gain", metrics["maximum_monthly_gain"]),
+        ("Max Monthly Loss", metrics["maximum_monthly_loss"]),
+        ("Annualized SD", metrics["annualized_volatility"]),
+        (
+            "Trailing 12 Months SD",
+            format_percent(
+                trailing_monthly_sd * Decimal(12).sqrt() if trailing_monthly_sd else None,
+                2,
+            ),
+        ),
+        ("Rf rate", metrics["annual_rfr"]),
+        ("Sharpe", metrics["sharpe_ratio"]),
+        ("Max Drawdown", metrics["maximum_monthly_loss"]),
+        ("No of data", str(len(return_values))),
         ("% Positive Months", metrics["positive_months"]),
         ("% Negative Months", metrics["negative_months"]),
-        ("Annualized Volatility", metrics["annualized_volatility"]),
-        ("Sharpe Ratio", metrics["sharpe_ratio"]),
     ]
     table = document.add_table(rows=0, cols=2)
     table.style = "Table Grid"
@@ -1002,6 +1037,7 @@ def build_boya_reference_docx(
             for run in cell.paragraphs[0].runs:
                 _set_boya_run_font(run, size=8.5)
 
+    document.add_page_break()
     document.add_heading("Disclaimer:", level=1)
     for text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if text.strip():

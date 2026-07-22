@@ -1,5 +1,9 @@
 # MVP Assumptions
 
+## 2026-07-22 Boya inception NAV baseline
+
+- 若首筆月末 NAV 的估值日期等於股份類別成立日，且 NAV 等於 inception NAV，該筆僅為成立基準紀錄：仍保留於 NAV 歷史與圖表，但不計入月度回報、波動率、年化回報、正負月份及 Sharpe 的樣本。Boya 的「Performance Matrix」沿用使用者提供的報表慣例，將「Max Drawdown」呈現為最大單月虧損；通用 `legacy_excel_v1` 的權威最大回撤仍採 dynamic running-peak 算法。
+
 ## 2026-07-21 NAV 輸入流程簡化
 
 - NAV 輸入頁以年度顯示固定 1 至 12 月。使用者可在任何尚未有紀錄且不早於基金成立月份的列輸入 NAV，包括尚未結束的月份及下一年度；年度選單預設提供至系統年份的下一年。歷史年度預設收起，選取「顯示或新增年度」後展開該年度。月度及累積回報由系統在儲存 NAV 後自動計算，不能手動輸入。

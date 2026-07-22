@@ -24,6 +24,7 @@ from navapp.models import (
     ShareClass,
 )
 from navapp.services import reports
+from navapp.services.calculations import NavPoint, calculate_performance
 from navapp.services.reports import (
     ReportGenerationError,
     audit_docx_package,
@@ -347,6 +348,10 @@ def test_boya_reference_docx_uses_original_fonts_monthly_table_and_embedded_char
     monthly_header = [cell.text for cell in document.tables[0].rows[0].cells]
     assert "Fund Performance (Net Monthly Returns)" in text
     assert "Fund Performance (Graph)" in text
+    assert "Performance Matrix" in text
+    matrix_labels = [cell.text for row in document.tables[1].rows for cell in row.cells[::2]]
+    assert "Monthly SD (inception)" in matrix_labels
+    assert "No of data" in matrix_labels
     assert monthly_header == [
         "Year",
         "Jan",
@@ -369,6 +374,72 @@ def test_boya_reference_docx_uses_original_fonts_monthly_table_and_embedded_char
     assert audit_docx_package(output)["valid"] is True
     with ZipFile(output) as package:
         assert len([name for name in package.namelist() if name.startswith("word/media/")]) == 1
+
+
+def test_boya_performance_matrix_excludes_the_inception_nav_baseline():
+    values = [
+        "100",
+        "99.71759987515605",
+        "99.79307677902622",
+        "100.84251040799334",
+        "92.38147210657785",
+        "94.53101207327228",
+        "91.38499084096586",
+        "88.92",
+    ]
+    months = [
+        date(2025, 11, 30),
+        date(2025, 12, 31),
+        date(2026, 1, 31),
+        date(2026, 2, 28),
+        date(2026, 3, 31),
+        date(2026, 4, 30),
+        date(2026, 5, 31),
+        date(2026, 6, 30),
+    ]
+    points = [
+        NavPoint(months[0], date(2025, 11, 24), Decimal(values[0])),
+        *[
+            NavPoint(month, month, Decimal(value))
+            for month, value in zip(months[1:], values[1:], strict=True)
+        ],
+    ]
+    calculation = calculate_performance(
+        points=points,
+        inception_nav=Decimal("100"),
+        inception_date=date(2025, 11, 24),
+        report_end=date(2026, 6, 30),
+        annual_rfr_decimal=Decimal("0.0423"),
+    )
+    snapshot = {
+        "share_class": {"inception_date": "2025-11-24"},
+        "calculation": calculation,
+    }
+    document = Document()
+
+    reports._add_boya_statistics(document, snapshot)
+
+    values_by_label = {row.cells[0].text: row.cells[1].text for row in document.tables[0].rows}
+    assert values_by_label == {
+        "Inception Date": "11/24/2025",
+        "End Date": "6/30/2026",
+        "ITD": "-11.08%",
+        "YTD": "-10.83%",
+        "Monthly SD (inception)": "3.59%",
+        "Monthly SD (12 months)": "3.59%",
+        "Days": "218",
+        "Annualized Return": "-18.23%",
+        "Max Monthly Gain": "2.33%",
+        "Max Monthly Loss": "-8.39%",
+        "Annualized SD": "12.43%",
+        "Trailing 12 Months SD": "12.43%",
+        "Rf rate": "4.23%",
+        "Sharpe": "-1.807",
+        "Max Drawdown": "-8.39%",
+        "No of data": "7",
+        "% Positive Months": "43%",
+        "% Negative Months": "57%",
+    }
 
 
 def test_pdf_conversion_replaces_an_existing_pdf(monkeypatch, settings, tmp_path):
