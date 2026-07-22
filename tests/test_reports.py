@@ -27,6 +27,7 @@ from navapp.services import reports
 from navapp.services.reports import (
     ReportGenerationError,
     audit_docx_package,
+    build_boya_reference_docx,
     build_builtin_docx,
     build_current_snapshot,
     external_excel_relationships,
@@ -318,6 +319,48 @@ def test_builtin_docx_sets_the_selected_cjk_font_on_user_commentary(report_fixtu
     fonts = paragraph.runs[0]._element.rPr.rFonts
     assert fonts.get(qn("w:eastAsia")) == "Noto Sans CJK SC"
     assert fonts.get(qn("w:ascii")) == "Noto Sans CJK SC"
+
+
+@pytest.mark.django_db
+def test_boya_reference_docx_uses_original_fonts_monthly_table_and_embedded_chart(report_fixture):
+    report, _, tmp_path = report_fixture
+    report.fund.short_code = "boya"
+    report.fund.save(update_fields=["short_code", "updated_at"])
+    snapshot = build_current_snapshot(report)
+    chart = tmp_path / "boya-chart.png"
+    output = tmp_path / "boya.docx"
+    generate_nav_chart(snapshot, chart)
+
+    build_boya_reference_docx(snapshot, chart, output)
+
+    document = Document(output)
+    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    fonts = document.styles["Normal"]._element.rPr.rFonts
+    monthly_header = [cell.text for cell in document.tables[0].rows[0].cells]
+    assert "Fund Performance (Net Monthly Returns)" in text
+    assert "Fund Performance (Graph)" in text
+    assert monthly_header == [
+        "Year",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+        "YTD",
+    ]
+    assert fonts.get(qn("w:ascii")) == "Times New Roman"
+    assert fonts.get(qn("w:eastAsia")) == "SimSun"
+    assert external_excel_relationships(output) == []
+    assert audit_docx_package(output)["valid"] is True
+    with ZipFile(output) as package:
+        assert len([name for name in package.namelist() if name.startswith("word/media/")]) == 1
 
 
 def test_pdf_conversion_replaces_an_existing_pdf(monkeypatch, settings, tmp_path):

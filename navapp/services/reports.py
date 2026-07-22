@@ -8,7 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from xml.etree import ElementTree
 from zipfile import ZipFile
@@ -663,13 +663,25 @@ def _style_table_text(table, cjk_font: str, header_fill: str = "E8EEF5") -> None
                     run.bold = row_index == 0
 
 
-def _write_footer(paragraph) -> None:
+def _write_footer(paragraph, font_name: str = "Arial", east_asia: str | None = None) -> None:
     paragraph.clear()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     run = paragraph.add_run("Page ")
-    _set_run_font(run, size=8, color=RGBColor(100, 112, 125))
+    _set_run_font(
+        run,
+        name=font_name,
+        size=8,
+        east_asia=east_asia,
+        color=RGBColor(100, 112, 125),
+    )
     field_run = paragraph.add_run()
-    _set_run_font(field_run, size=8, color=RGBColor(100, 112, 125))
+    _set_run_font(
+        field_run,
+        name=font_name,
+        size=8,
+        east_asia=east_asia,
+        color=RGBColor(100, 112, 125),
+    )
     field_begin = OxmlElement("w:fldChar")
     field_begin.set(qn("w:fldCharType"), "begin")
     instr = OxmlElement("w:instrText")
@@ -684,12 +696,12 @@ def _write_footer(paragraph) -> None:
     field_run._r.extend([field_begin, instr, field_separator, field_result, field_end])
 
 
-def _add_footer(document: Document) -> None:
+def _add_footer(document: Document, font_name: str = "Arial", east_asia: str | None = None) -> None:
     document.settings.odd_and_even_pages_header_footer = False
     section = document.sections[0]
     section.different_first_page_header_footer = False
     for footer in (section.footer, section.even_page_footer, section.first_page_footer):
-        _write_footer(footer.paragraphs[0])
+        _write_footer(footer.paragraphs[0], font_name, east_asia)
 
 
 def _report_logo_path(snapshot: dict[str, object]) -> Path | None:
@@ -717,6 +729,274 @@ def _add_commentary(document: Document, markdown_value: str, cjk_font: str) -> l
             run.bold = segment.bold
             run.italic = segment.italic
     return paragraphs
+
+
+def _set_boya_run_font(run, size: float | None = None, **kwargs) -> None:
+    _set_run_font(
+        run,
+        name="Times New Roman",
+        size=size,
+        east_asia="SimSun",
+        **kwargs,
+    )
+
+
+def _configure_boya_styles(document: Document) -> None:
+    styles = document.styles
+    normal = styles["Normal"]
+    normal.font.name = "Times New Roman"
+    normal._element.rPr.rFonts.set(qn("w:ascii"), "Times New Roman")
+    normal._element.rPr.rFonts.set(qn("w:hAnsi"), "Times New Roman")
+    _set_style_font(normal, "SimSun")
+    normal.font.size = Pt(10)
+    normal.paragraph_format.space_before = Pt(0)
+    normal.paragraph_format.space_after = Pt(4)
+    normal.paragraph_format.line_spacing = 1.05
+    for name in ("Heading 1", "Heading 2", "Heading 3"):
+        style = styles[name]
+        style.font.name = "Times New Roman"
+        style._element.rPr.rFonts.set(qn("w:ascii"), "Times New Roman")
+        style._element.rPr.rFonts.set(qn("w:hAnsi"), "Times New Roman")
+        _set_style_font(style, "SimSun")
+        style.font.size = Pt(11)
+        style.font.bold = True
+        style.font.color.rgb = RGBColor(35, 24, 21)
+        style.paragraph_format.space_before = Pt(7)
+        style.paragraph_format.space_after = Pt(3)
+        style.paragraph_format.keep_with_next = True
+    for name in ("List Bullet", "List Number"):
+        style = styles[name]
+        style.font.name = "Times New Roman"
+        _set_style_font(style, "SimSun")
+        style.font.size = Pt(10)
+        style.paragraph_format.left_indent = Inches(0.3)
+        style.paragraph_format.first_line_indent = Inches(-0.15)
+        style.paragraph_format.space_after = Pt(2)
+    if "Boya Disclaimer" not in styles:
+        disclaimer = styles.add_style("Boya Disclaimer", WD_STYLE_TYPE.PARAGRAPH)
+    else:
+        disclaimer = styles["Boya Disclaimer"]
+    disclaimer.font.name = "Times New Roman"
+    _set_style_font(disclaimer, "SimSun")
+    disclaimer.font.size = Pt(8)
+    disclaimer.paragraph_format.space_after = Pt(4)
+    disclaimer.paragraph_format.line_spacing = 1.0
+
+
+def _boya_monthly_rows(calculation: dict[str, object]) -> list[dict[str, object]]:
+    rows: dict[str, dict[str, object]] = {}
+    for item in calculation["monthly"]:
+        valuation_month = date.fromisoformat(str(item["valuation_month"]))
+        row = rows.setdefault(
+            str(valuation_month.year),
+            {"year": str(valuation_month.year), "months": [""] * 12, "ytd": "—"},
+        )
+        row["months"][valuation_month.month - 1] = str(item["return_display"])
+    matrix = calculation["quarterly_matrix"]
+    for year, row in rows.items():
+        row["ytd"] = str(matrix.get(year, {}).get("ytd", {}).get("display", "—"))
+    return [rows[year] for year in sorted(rows)]
+
+
+def _boya_value(items: list[dict[str, object]], label: str) -> str:
+    return next((str(item["value"]) for item in items if item["label"] == label), "")
+
+
+def _add_boya_monthly_performance(document: Document, snapshot: dict[str, object]) -> None:
+    document.add_heading("Fund Performance (Net Monthly Returns)", level=1)
+    table = document.add_table(rows=1, cols=14)
+    table.style = "Table Grid"
+    headers = [
+        "Year",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+        "YTD",
+    ]
+    for cell, label in zip(table.rows[0].cells, headers, strict=True):
+        cell.text = label
+    for row_data in _boya_monthly_rows(snapshot["calculation"]):
+        cells = table.add_row().cells
+        values = [row_data["year"], *row_data["months"], row_data["ytd"]]
+        for cell, value in zip(cells, values, strict=True):
+            cell.text = str(value)
+    _set_table_geometry(table, [660, *([680] * 12), 1044])
+    _repeat_header(table.rows[0])
+    _style_table_text(table, "SimSun", "F2F2F2")
+    for cell in table.rows[0].cells:
+        for run in cell.paragraphs[0].runs:
+            _set_boya_run_font(run, size=8.5, bold=True)
+    for row in table.rows[1:]:
+        for cell in row.cells:
+            for run in cell.paragraphs[0].runs:
+                _set_boya_run_font(run, size=8.5)
+
+
+def _add_boya_statistics(document: Document, snapshot: dict[str, object]) -> None:
+    document.add_heading("Fund Statistics", level=1)
+    share = snapshot["share_class"]
+    metrics = snapshot["calculation"]["metrics_display"]
+    rows = [
+        ("Inception Date", share["inception_date"]),
+        ("Return ITD", metrics["itd_return"]),
+        ("Return YTD", metrics["ytd_return"]),
+        ("Annualized Return", metrics["annualized_return"]),
+        ("% Positive Months", metrics["positive_months"]),
+        ("% Negative Months", metrics["negative_months"]),
+        ("Annualized Volatility", metrics["annualized_volatility"]),
+        ("Sharpe Ratio", metrics["sharpe_ratio"]),
+    ]
+    table = document.add_table(rows=0, cols=2)
+    table.style = "Table Grid"
+    for label, value in rows:
+        cells = table.add_row().cells
+        cells[0].text = label
+        cells[1].text = str(value)
+    _set_table_geometry(table, [4200, 5664])
+    for row in table.rows:
+        _shade_cell(row.cells[0], "F2F2F2")
+        for cell in row.cells:
+            for run in cell.paragraphs[0].runs:
+                _set_boya_run_font(run, size=9)
+
+
+def _add_boya_general_information(document: Document, snapshot: dict[str, object]) -> None:
+    document.add_heading("General Information", level=1)
+    fund = snapshot["fund"]
+    parties = fund["parties"]
+    terms = fund["terms"]
+    values = [
+        ("Structure", fund["structure"]),
+        ("Domicile", fund["domicile"]),
+        ("General Partner", _boya_value(parties, "General Partner")),
+        ("Fund Administrator", _boya_value(parties, "Fund Administrator")),
+        ("Investment Manager", _boya_value(parties, "Investment Manager")),
+        ("Minimum Contribution", _boya_value(terms, "Minimum Contribution")),
+        ("Valuation Frequency", _boya_value(terms, "Valuation Frequency")),
+        ("Base Currency", _boya_value(terms, "Base Currency")),
+        ("Management Fee", _boya_value(terms, "Management Fee")),
+        ("Year End Date", _boya_value(terms, "Year End Date")),
+        ("Carried Interest", _boya_value(terms, "Carried Interest")),
+        ("Lock-up Period", _boya_value(terms, "Lock-up Period")),
+    ]
+    pairs = [values[index : index + 2] for index in range(0, len(values), 2)]
+    table = document.add_table(rows=0, cols=4)
+    table.style = "Table Grid"
+    for pair in pairs:
+        cells = table.add_row().cells
+        flattened = [*pair[0], *(pair[1] if len(pair) > 1 else ("", ""))]
+        for cell, value in zip(cells, flattened, strict=True):
+            cell.text = str(value)
+        _shade_cell(cells[0], "F2F2F2")
+        _shade_cell(cells[2], "F2F2F2")
+    _set_table_geometry(table, [1600, 3332, 1600, 3332])
+    for row in table.rows:
+        for cell in row.cells:
+            for run in cell.paragraphs[0].runs:
+                _set_boya_run_font(run, size=8.5)
+
+
+def build_boya_reference_docx(
+    snapshot: dict[str, object], chart_path: Path, output_path: Path
+) -> None:
+    """Build a dynamic Boya report in the typography and structure of its source newsletter."""
+    document = Document()
+    section = document.sections[0]
+    section.page_width = Mm(210)
+    section.page_height = Mm(297)
+    section.top_margin = Mm(12.7)
+    section.right_margin = Mm(12.7)
+    section.bottom_margin = Mm(12.7)
+    section.left_margin = Mm(12.7)
+    section.header_distance = Mm(15)
+    section.footer_distance = Mm(17.5)
+    _configure_boya_styles(document)
+    _add_footer(document, "Times New Roman", "SimSun")
+
+    identity = snapshot["identity"]
+    fund = snapshot["fund"]
+    core = document.core_properties
+    core.title = f"{identity['fund_display_name']} - {identity['period_label_en']}"
+    core.subject = f"{identity['share_class_name']} {identity['period_label_en']}"
+    core.author = "NAV Quarterly Reporting"
+    core.keywords = (
+        f"report_id={identity['report_id']}; version={identity['version']}; "
+        f"formula={snapshot['formula_version']}"
+    )
+    core.comments = f"Snapshot captured at {snapshot['captured_at']}"
+    logo_path = _report_logo_path(snapshot)
+    if logo_path:
+        logo = document.add_paragraph()
+        logo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        logo.paragraph_format.space_after = Pt(1)
+        logo.add_run().add_picture(str(logo_path), height=Mm(13))
+    title = document.add_paragraph()
+    title.paragraph_format.space_after = Pt(1)
+    title.paragraph_format.keep_with_next = True
+    _set_boya_run_font(title.add_run(str(identity["fund_display_name"])), size=16, bold=True)
+    subtitle = document.add_paragraph()
+    subtitle.paragraph_format.space_after = Pt(5)
+    subtitle.paragraph_format.keep_with_next = True
+    _set_boya_run_font(subtitle.add_run(str(identity["period_label_en"])), size=11, bold=True)
+    cutoff = document.add_paragraph()
+    cutoff.paragraph_format.space_after = Pt(5)
+    _set_boya_run_font(cutoff.add_run(f"All data as on {identity['report_date']}"), size=8.5)
+
+    document.add_heading("Investment Objective", level=1)
+    objective = document.add_paragraph()
+    _set_boya_run_font(objective.add_run(str(fund["investment_objective"])), size=10)
+    document.add_heading("Strategies Highlight and Characteristics", level=1)
+    for strategy in fund["strategies"]:
+        paragraph = document.add_paragraph(style="List Bullet")
+        _set_boya_run_font(paragraph.add_run(str(strategy)), size=10)
+
+    _add_boya_monthly_performance(document, snapshot)
+    document.add_heading("Fund Performance (Graph)", level=1)
+    document.add_picture(str(chart_path), width=Inches(7.05))
+    document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_boya_statistics(document, snapshot)
+
+    document.add_heading("Manager Commentary", level=1)
+    _add_commentary(document, str(snapshot["commentary"]["markdown"]), "SimSun")
+    for paragraph in document.paragraphs:
+        if paragraph.style.name in {"List Bullet", "List Number"} or paragraph.text:
+            for run in paragraph.runs:
+                if run.font.name == "SimSun":
+                    _set_boya_run_font(run, size=10)
+
+    _add_boya_general_information(document, snapshot)
+    document.add_heading("Contacts", level=1)
+    contacts = document.add_table(rows=0, cols=2)
+    contacts.style = "Table Grid"
+    for contact in fund["contacts"]:
+        cells = contacts.add_row().cells
+        cells[0].text = str(contact["role"] or "Contact")
+        cells[1].text = " | ".join(
+            item for item in (contact["name"], contact["email"], contact["phone"]) if item
+        )
+        _shade_cell(cells[0], "F2F2F2")
+    _set_table_geometry(contacts, [2500, 7364])
+    for row in contacts.rows:
+        for cell in row.cells:
+            for run in cell.paragraphs[0].runs:
+                _set_boya_run_font(run, size=8.5)
+
+    document.add_heading("Disclaimer:", level=1)
+    for text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
+        if text.strip():
+            paragraph = document.add_paragraph(style="Boya Disclaimer")
+            _set_boya_run_font(paragraph.add_run(text.strip()), size=8)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(output_path)
 
 
 def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_path: Path) -> None:
@@ -1019,6 +1299,8 @@ def generate_report_files(report: QuarterlyReport, actor=None) -> list[Generated
                 Path(report.fund.custom_docx_template.path),
                 docx_path,
             )
+        elif report.fund.short_code.casefold() == "boya":
+            build_boya_reference_docx(snapshot, chart_path, docx_path)
         else:
             build_builtin_docx(snapshot, chart_path, docx_path)
         if external_excel_relationships(docx_path):

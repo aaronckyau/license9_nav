@@ -43,3 +43,4 @@
 34. Boya Quant LPF 的來源月報「一般資料」列示普通合夥人為 Harmony Creek (HK) Limited，但同一份原始免責聲明提及 ARC Partners Limited。系統採用一般資料欄位作基金設定，並逐字保留來源免責聲明，不對法律文字作推斷性修訂；報告維持可供定稿，待業務確認後才可定稿。
 35. Boya 2026-05 月報的基金經理評論包含簡體中文原文，因此該份報告選用 `zh-Hans` 與 Noto Sans CJK SC；此設定只決定系統固定文字及字型，不會翻譯英文、簡體中文評論或基金／法律原文。
 36. 報告建立頁必須由目前報告的 `report` query parameter，或 NAV 頁帶入的 `share_class` query parameter 取得基金範圍。股份類別選單只列出該基金的 active 類別；不再提供報告文字選項。新增報告使用基金的有效 `report_language`，若舊基金保存的值不在現行選項內則安全回退為繁體中文。
+37. Boya Quant LPF 的原始月報是視覺與結構依據，但其原生 Word 圖表包含外部 Excel/OLE 關聯，不能直接作為系統範本。系統以基金專用原稿樣式產生器重現其 Times New Roman／宋體、A4 0.5-inch 邊界、月度回報表及章節順序，並以當期 NAV 生成的 PNG 圖表取代外部圖表；這確保資料動態更新且 DOCX 不含外部 Excel 關聯。
