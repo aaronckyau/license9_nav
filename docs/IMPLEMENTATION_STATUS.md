@@ -1,10 +1,10 @@
 # Implementation Status
 
-## 2026-07-22 Boya Quant LPF 資料匯入（進行中）
+## 2026-07-22 Boya Quant LPF 資料匯入（已完成）
 
 - 已完成使用者提供的 `Boya Data till 202605.xlsx` 與 `Boya Quant LPF Monthly Newsletter 202605.docx` 的只讀結構核對。將只匯入本基金的 2025-11 成立 NAV 及 2025-12 至 2026-05 NAV；活頁簿中 2022–2024 的舊資料與本基金成立日不符，不會混入。
 - Production 已備份並建立 Boya Quant LPF／Initial Series，匯入 7 筆官方 NAV，建立 2026 年 5 月月報；Treasury `BC_10YEAR` 的 12 筆觀察值、DOCX、PDF、immutable snapshot 及 DOCX 無外部 Excel 關聯檢查均已通過。
-- 視覺檢查發現簡體中文的使用者評論在 LibreOffice PDF 顯示問號；另發現同名 PDF 已存在時 LibreOffice 不會覆寫。已把使用者輸入的評論、基金內容、表格與免責聲明 run 直接指定為所選 Noto CJK 字型（避免 LibreOffice 回退到 Arial），並在每次轉檔前只移除該報告輸出目錄的同名 PDF；兩項均有回歸測試。本機完整品質檢查為 56 passed、1 skipped（本機未安裝 LibreOffice），待發佈後重新產生 Boya 報告並確認。
+- 視覺檢查發現簡體中文的使用者評論在 LibreOffice PDF 顯示問號；另發現同名 PDF 已存在時 LibreOffice 不會覆寫。已把使用者輸入的評論、基金內容、表格與免責聲明 run 直接指定為所選 Noto CJK 字型（避免 LibreOffice 回退到 Arial），並在每次轉檔前只移除該報告輸出目錄的同名 PDF；兩項均有回歸測試。修正已發佈，並以實際 production LibreOffice 重新產生 Boya 報告：5 頁 A4 PDF、簡體評論完整顯示、DOCX package audit 有效、無外部 Excel relationship、2 個嵌入媒體且無嵌入 spreadsheet。報告維持 `READY`／可供定稿，未自動定稿。
 
 ## 2026-07-22 中文報告文字（已發佈）
 
