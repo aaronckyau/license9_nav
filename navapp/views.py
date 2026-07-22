@@ -620,6 +620,7 @@ def report_create(request):
                 fund=share_class.fund,
                 share_class=share_class,
                 report_type=report_type,
+                report_language=form.cleaned_data["report_language"],
                 year=year,
                 report_month=form.cleaned_data["month"],
                 quarter=form.cleaned_data["quarter"],
@@ -858,6 +859,7 @@ def _report_history_context(
         period_initial = {
             "share_class": active_report.share_class_id,
             "report_type": active_report.report_type,
+            "report_language": active_report.report_language,
             "year": active_report.year,
             "month": active_report.report_month,
         }

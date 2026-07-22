@@ -592,6 +592,12 @@ class ReportCreateForm(forms.Form):
             (QuarterlyReport.ReportType.QUARTERLY, "季報"),
         ),
     )
+    report_language = forms.ChoiceField(
+        label="報告文字",
+        choices=QuarterlyReport.ReportLanguage.choices,
+        initial=QuarterlyReport.ReportLanguage.TRADITIONAL_CHINESE,
+        required=False,
+    )
     year = forms.IntegerField(label="報告年度", min_value=1900, max_value=9999)
     month = forms.TypedChoiceField(
         label="截止月份",
@@ -608,6 +614,12 @@ class ReportCreateForm(forms.Form):
         completed = latest_completed_month()
         self.fields["year"].initial = completed.year
         self.fields["month"].initial = completed.month
+
+    def clean_report_language(self):
+        return (
+            self.cleaned_data["report_language"]
+            or QuarterlyReport.ReportLanguage.TRADITIONAL_CHINESE
+        )
 
     def clean(self):
         cleaned = super().clean()

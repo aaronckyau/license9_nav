@@ -113,24 +113,24 @@ def test_docx_package_contains_sections_table_values_chart_and_no_excel_links(re
     snapshot, output = _build_docx(report, tmp_path)
     document = Document(output)
     text = "\n".join(paragraph.text for paragraph in document.paragraphs)
-    assert "Investment Objective" in text
-    assert "Fund Performance (Net Quarterly Returns)" in text
-    assert "Fund Performance (Graph)" in text
-    assert "Manager Commentary" in text
+    assert "投資目標" in text
+    assert "基金表現（季度淨回報）" in text
+    assert "基金表現（圖表）" in text
+    assert "基金經理評論" in text
     assert "Fund-specific legal disclaimer" in text
     assert "Professional investors only - fund override" in text
     assert "Calculation and provenance:" not in text
     section_positions = [
         text.index(label)
         for label in (
-            "Investment Objective",
-            "Strategy Highlights and Characteristics",
-            "Fund Performance (Net Quarterly Returns)",
-            "Fund Performance (Graph)",
-            "Manager Commentary",
-            "General Information",
-            "Contacts",
-            "Disclaimer",
+            "投資目標",
+            "策略重點及特點",
+            "基金表現（季度淨回報）",
+            "基金表現（圖表）",
+            "基金經理評論",
+            "一般資料",
+            "聯絡資料",
+            "免責聲明",
         )
     ]
     assert section_positions == sorted(section_positions)
@@ -205,12 +205,12 @@ def test_monthly_docx_uses_monthly_period_and_quarterly_performance_table(report
     assert snapshot["identity"]["report_type"] == "MONTHLY"
     assert snapshot["identity"]["period_label"] == "2024 年 2 月月報"
     assert snapshot["calculation"]["report_type"] == "MONTHLY"
-    assert "February 2024 Monthly Report" in paragraph_text
-    assert "Fund Performance (Net Quarterly Returns)" in paragraph_text
-    assert "Fund Performance (Monthly Returns)" not in paragraph_text
-    assert "Year" in table_text
-    assert "Q1" in table_text
-    assert "YTD" in table_text
+    assert "2024 年 2 月月報" in paragraph_text
+    assert "基金表現（季度淨回報）" in paragraph_text
+    assert "基金表現（每月淨回報）" not in paragraph_text
+    assert "年度" in table_text
+    assert "第一季" in table_text
+    assert "年初至今" in table_text
     assert "3.00%" in table_text
     assert all("Version" not in footer.text for footer in document.sections[0].footer.paragraphs)
     package_audit = audit_docx_package(output)
@@ -274,9 +274,32 @@ def test_monthly_generation_uses_custom_layout_when_template_is_configured(
     assert len(custom_calls) == 1
     assert {item.file_type for item in generated} == {"DOCX", "PDF"}
     monthly_docx = next(item.absolute_path for item in generated if item.file_type == "DOCX")
-    assert "Fund Performance (Net Quarterly Returns)" in "\n".join(
+    assert "基金表現（季度淨回報）" in "\n".join(
         paragraph.text for paragraph in Document(monthly_docx).paragraphs
     )
+
+
+@pytest.mark.django_db
+def test_builtin_docx_uses_simplified_chinese_system_copy(report_fixture):
+    report, _, tmp_path = report_fixture
+    report.report_language = QuarterlyReport.ReportLanguage.SIMPLIFIED_CHINESE
+    report.save(update_fields=["report_language", "updated_at"])
+
+    snapshot, output = _build_docx(report, tmp_path)
+    document = Document(output)
+    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    table_text = "\n".join(
+        cell.text for table in document.tables for row in table.rows for cell in row.cells
+    )
+
+    assert snapshot["identity"]["report_language"] == "zh-Hans"
+    assert snapshot["identity"]["period_label"] == "2024年第 1 季季报"
+    assert "投资目标" in text
+    assert "基金表现（季度净回报）" in text
+    assert "基金经理评论" in text
+    assert "免责声明" in text
+    assert "年度" in table_text
+    assert "年初至今" in table_text
 
 
 @pytest.mark.django_db

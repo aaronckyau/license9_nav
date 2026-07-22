@@ -11,6 +11,7 @@ RUN apt-get update \
         fonts-crosextra-carlito \
         fonts-dejavu-core \
         fonts-liberation2 \
+        fonts-noto-cjk \
         libreoffice-writer \
         poppler-utils \
     && rm -rf /var/lib/apt/lists/* \

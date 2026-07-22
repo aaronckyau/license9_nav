@@ -1,5 +1,10 @@
 # Implementation Status
 
+## 2026-07-22 中文報告文字（本機驗證完成，待發佈）
+
+- 報告建立頁加入繁體中文／簡體中文選擇；內建 DOCX 與 NAV 圖表使用相應 CJK 字型及系統固定文字，使用者原文內容不會被自動翻譯。
+- 已通過繁體／簡體內建 DOCX 回歸測試、完整 pytest、Ruff、Django system check 及 migration check；本機沒有 Noto CJK／LibreOffice，圖表文字在本機安全退回英文軸標籤，production Docker image 會安裝 Noto CJK。
+
 ## 2026-07-22 基金設定簡化（本機驗證完成，待發佈）
 
 - 一般基金設定頁已縮減為指定的基本資料表格、Portfolio Manager 的 Name／Contact、Investment Objective、Strategy Highlights and Characteristics 及 Disclaimer。

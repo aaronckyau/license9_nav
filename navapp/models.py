@@ -362,6 +362,10 @@ class RFRObservation(models.Model):
 
 
 class QuarterlyReport(models.Model):
+    class ReportLanguage(models.TextChoices):
+        TRADITIONAL_CHINESE = "zh-Hant", "繁體中文"
+        SIMPLIFIED_CHINESE = "zh-Hans", "簡體中文"
+
     class ReportType(models.TextChoices):
         MONTHLY = "MONTHLY", "Monthly"
         QUARTERLY = "QUARTERLY", "Quarterly"
@@ -379,6 +383,11 @@ class QuarterlyReport(models.Model):
         max_length=12,
         choices=ReportType.choices,
         default=ReportType.QUARTERLY,
+    )
+    report_language = models.CharField(
+        max_length=10,
+        choices=ReportLanguage.choices,
+        default=ReportLanguage.TRADITIONAL_CHINESE,
     )
     year = models.PositiveIntegerField()
     report_month = models.PositiveSmallIntegerField(
@@ -459,6 +468,7 @@ class QuarterlyReport(models.Model):
                     "fund_id",
                     "share_class_id",
                     "report_type",
+                    "report_language",
                     "year",
                     "report_month",
                     "quarter",

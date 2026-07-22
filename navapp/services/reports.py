@@ -30,6 +30,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Mm, Pt, RGBColor
 from docxtpl import DocxTemplate, InlineImage
+from matplotlib.font_manager import FontProperties, findfont
 
 from navapp.models import (
     AuditLog,
@@ -63,6 +64,146 @@ LEGACY_FEE_STRUCTURE_NOTE = (
 AUREUM_INFINITY_LOGO_PATH = (
     Path(settings.BASE_DIR) / "navapp" / "assets" / "aureum-infinity-logo.png"
 )
+
+REPORT_COPY = {
+    "zh-Hant": {
+        "cjk_font": "Noto Sans CJK TC",
+        "investment_objective": "投資目標",
+        "strategy_highlights": "策略重點及特點",
+        "fund_performance": "基金表現（季度淨回報）",
+        "fund_performance_graph": "基金表現（圖表）",
+        "fund_statistics": "基金統計數據",
+        "manager_commentary": "基金經理評論",
+        "general_information": "一般資料",
+        "contacts": "聯絡資料",
+        "disclaimer": "免責聲明",
+        "year": "年度",
+        "q1": "第一季",
+        "q2": "第二季",
+        "q3": "第三季",
+        "q4": "第四季",
+        "ytd": "年初至今",
+        "statistic": "統計項目",
+        "value": "數值",
+        "item": "項目",
+        "details": "內容",
+        "contact": "聯絡人",
+        "nav_per_share": "每股 NAV",
+        "inception_date": "成立日期",
+        "return_itd": "成立以來回報",
+        "return_ytd": "年初至今回報",
+        "annualized_return": "年化回報",
+        "positive_months": "正回報月份",
+        "negative_months": "負回報月份",
+        "annualized_volatility": "年化波動率",
+        "maximum_drawdown": "最大回撤",
+        "sharpe_ratio": "夏普比率",
+        "structure": "法律架構",
+        "domicile": "註冊地",
+        "currency": "幣別",
+        "return_basis": "回報基準",
+        "portfolio_manager": "投資組合經理",
+        "general_partner": "普通合夥人",
+        "investment_manager": "投資經理",
+        "fund_administrator": "基金行政管理人",
+        "minimum_contribution": "最低認購額",
+        "valuation_frequency": "估值頻率",
+        "base_currency": "基礎幣別",
+        "bloomberg_code": "彭博代碼",
+        "management_fee": "管理費",
+        "lock_up_period": "鎖定期",
+        "carried_interest": "附帶權益",
+        "net": "扣除費用後",
+        "gross": "扣除費用前",
+    },
+    "zh-Hans": {
+        "cjk_font": "Noto Sans CJK SC",
+        "investment_objective": "投资目标",
+        "strategy_highlights": "策略重点及特点",
+        "fund_performance": "基金表现（季度净回报）",
+        "fund_performance_graph": "基金表现（图表）",
+        "fund_statistics": "基金统计数据",
+        "manager_commentary": "基金经理评论",
+        "general_information": "一般资料",
+        "contacts": "联系资料",
+        "disclaimer": "免责声明",
+        "year": "年度",
+        "q1": "第一季",
+        "q2": "第二季",
+        "q3": "第三季",
+        "q4": "第四季",
+        "ytd": "年初至今",
+        "statistic": "统计项目",
+        "value": "数值",
+        "item": "项目",
+        "details": "内容",
+        "contact": "联系人",
+        "nav_per_share": "每股 NAV",
+        "inception_date": "成立日期",
+        "return_itd": "成立以来回报",
+        "return_ytd": "年初至今回报",
+        "annualized_return": "年化回报",
+        "positive_months": "正回报月份",
+        "negative_months": "负回报月份",
+        "annualized_volatility": "年化波动率",
+        "maximum_drawdown": "最大回撤",
+        "sharpe_ratio": "夏普比率",
+        "structure": "法律架构",
+        "domicile": "注册地",
+        "currency": "币别",
+        "return_basis": "回报基准",
+        "portfolio_manager": "投资组合经理",
+        "general_partner": "普通合伙人",
+        "investment_manager": "投资经理",
+        "fund_administrator": "基金行政管理人",
+        "minimum_contribution": "最低认购额",
+        "valuation_frequency": "估值频率",
+        "base_currency": "基础币别",
+        "bloomberg_code": "彭博代码",
+        "management_fee": "管理费",
+        "lock_up_period": "锁定期",
+        "carried_interest": "附带权益",
+        "net": "扣除费用后",
+        "gross": "扣除费用前",
+    },
+}
+
+REPORT_LABEL_ALIASES = {
+    "Structure": "structure",
+    "Domicile": "domicile",
+    "Currency": "currency",
+    "Return Basis": "return_basis",
+    "Portfolio Manager": "portfolio_manager",
+    "General Partner": "general_partner",
+    "Investment Manager": "investment_manager",
+    "Fund Administrator": "fund_administrator",
+    "Minimum Contribution": "minimum_contribution",
+    "Valuation Frequency": "valuation_frequency",
+    "Base Currency": "base_currency",
+    "Bloomberg Code": "bloomberg_code",
+    "Management Fee": "management_fee",
+    "Lock-up Period": "lock_up_period",
+    "Carried Interest": "carried_interest",
+}
+
+
+def _report_copy(snapshot: dict[str, object]) -> dict[str, str]:
+    language = str(snapshot["identity"].get("report_language", "zh-Hant"))
+    return REPORT_COPY.get(language, REPORT_COPY["zh-Hant"])
+
+
+def _localized_period_label(identity: dict[str, object], language: str) -> str:
+    if identity["report_type"] == "MONTHLY":
+        suffix = "月报" if language == "zh-Hans" else "月報"
+        if language == "zh-Hans":
+            return f"{identity['year']}年{identity['report_month']}月{suffix}"
+        return f"{identity['year']} 年 {identity['report_month']} 月{suffix}"
+    suffix = "季报" if language == "zh-Hans" else "季報"
+    return f"{identity['year']}年第 {identity['quarter']} 季{suffix}"
+
+
+def _localized_report_label(label: object, copy: dict[str, str]) -> str:
+    return copy.get(REPORT_LABEL_ALIASES.get(str(label), ""), str(label))
 
 
 def sha256_file(path: Path) -> str:
@@ -260,7 +401,16 @@ def build_current_snapshot(report: QuarterlyReport) -> dict[str, object]:
             "report_month": report.report_month,
             "version": report.version,
             "report_date": report.report_date.isoformat(),
-            "period_label": report.period_label,
+            "report_language": report.report_language,
+            "period_label": _localized_period_label(
+                {
+                    "report_type": report.report_type,
+                    "year": report.year,
+                    "quarter": report.quarter,
+                    "report_month": report.report_month,
+                },
+                report.report_language,
+            ),
             "period_label_en": report.period_label_en,
         },
         "fund": {
@@ -323,18 +473,26 @@ def generate_nav_chart(snapshot: dict[str, object], output_path: Path) -> None:
         values.insert(0, float(inception["inception_nav"]))
     colour = snapshot["fund"]["brand_colour"] or "#183B73"
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    copy = _report_copy(snapshot)
+    try:
+        cjk_font = FontProperties(fname=findfont(copy["cjk_font"], fallback_to_default=False))
+    except ValueError:
+        cjk_font = None
     fig, axis = plt.subplots(figsize=(9.6, 4.2), dpi=180)
     try:
         fig.patch.set_facecolor("white")
         axis.set_facecolor("white")
         axis.plot(dates, values, color=colour, linewidth=2.4, marker="o", markersize=3.4)
-        axis.set_ylabel("NAV per Share")
+        axis.set_ylabel(
+            copy["nav_per_share"] if cjk_font else "NAV per Share",
+            fontproperties=cjk_font,
+        )
         axis.grid(axis="y", color="#DCE3EA", linewidth=0.7)
         axis.spines[["top", "right"]].set_visible(False)
         axis.spines[["left", "bottom"]].set_color("#9AA8B6")
         interval = 3 if len(dates) <= 36 else 6
         axis.xaxis.set_major_locator(mdates.MonthLocator(interval=interval))
-        axis.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+        axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
         fig.autofmt_xdate(rotation=35, ha="right")
         axis.margins(x=0.02)
         fig.tight_layout()
@@ -343,10 +501,18 @@ def generate_nav_chart(snapshot: dict[str, object], output_path: Path) -> None:
         plt.close(fig)
 
 
-def _set_run_font(run, name: str = "Arial", size: float | None = None, **kwargs) -> None:
+def _set_run_font(
+    run,
+    name: str = "Arial",
+    size: float | None = None,
+    east_asia: str | None = None,
+    **kwargs,
+) -> None:
     run.font.name = name
     run._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:ascii"), name)
     run._element.rPr.rFonts.set(qn("w:hAnsi"), name)
+    if east_asia:
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia)
     if size is not None:
         run.font.size = Pt(size)
     for key, value in kwargs.items():
@@ -356,12 +522,17 @@ def _set_run_font(run, name: str = "Arial", size: float | None = None, **kwargs)
             setattr(run.font, key, value)
 
 
-def _configure_styles(document: Document, colour: RGBColor) -> None:
+def _set_style_font(style, cjk_font: str) -> None:
+    style._element.rPr.rFonts.set(qn("w:eastAsia"), cjk_font)
+
+
+def _configure_styles(document: Document, colour: RGBColor, cjk_font: str) -> None:
     styles = document.styles
     normal = styles["Normal"]
     normal.font.name = "Arial"
     normal._element.rPr.rFonts.set(qn("w:ascii"), "Arial")
     normal._element.rPr.rFonts.set(qn("w:hAnsi"), "Arial")
+    _set_style_font(normal, cjk_font)
     normal.font.size = Pt(11)
     normal.paragraph_format.space_before = Pt(0)
     normal.paragraph_format.space_after = Pt(6)
@@ -376,6 +547,7 @@ def _configure_styles(document: Document, colour: RGBColor) -> None:
         style.font.name = "Arial"
         style._element.rPr.rFonts.set(qn("w:ascii"), "Arial")
         style._element.rPr.rFonts.set(qn("w:hAnsi"), "Arial")
+        _set_style_font(style, cjk_font)
         style.font.size = Pt(size)
         style.font.bold = True
         style.font.color.rgb = colour
@@ -385,6 +557,7 @@ def _configure_styles(document: Document, colour: RGBColor) -> None:
     for name in ("List Bullet", "List Number"):
         style = styles[name]
         style.font.name = "Arial"
+        _set_style_font(style, cjk_font)
         style.font.size = Pt(11)
         style.paragraph_format.left_indent = Inches(0.5)
         style.paragraph_format.first_line_indent = Inches(-0.25)
@@ -395,6 +568,7 @@ def _configure_styles(document: Document, colour: RGBColor) -> None:
     else:
         disclaimer = styles["Disclaimer"]
     disclaimer.font.name = "Arial"
+    _set_style_font(disclaimer, cjk_font)
     disclaimer.font.size = Pt(10)
     disclaimer.paragraph_format.space_after = Pt(6)
     disclaimer.paragraph_format.line_spacing = 1.15
@@ -547,12 +721,11 @@ def _add_commentary(document: Document, markdown_value: str) -> list:
 def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_path: Path) -> None:
     document = Document()
     identity = snapshot["identity"]
+    copy = _report_copy(snapshot)
+    cjk_font = copy["cjk_font"]
     core = document.core_properties
-    core.title = f"{identity['fund_display_name']} - {identity['period_label_en']}"
-    core.subject = (
-        f"NAV {'monthly' if identity['report_type'] == 'MONTHLY' else 'quarterly'} report "
-        f"for {identity['share_class_name']}"
-    )
+    core.title = f"{identity['fund_display_name']} - {identity['period_label']}"
+    core.subject = f"{identity['share_class_name']} {identity['period_label']}"
     core.author = "NAV Quarterly Reporting"
     core.keywords = (
         f"report_id={identity['report_id']}; version={identity['version']}; "
@@ -570,7 +743,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     section.footer_distance = Mm(10)
     colour_hex = str(snapshot["fund"]["brand_colour"] or "#183B73").lstrip("#")
     colour = RGBColor.from_string(colour_hex.upper())
-    _configure_styles(document, colour)
+    _configure_styles(document, colour, cjk_font)
     _add_footer(document)
 
     fund = snapshot["fund"]
@@ -585,17 +758,17 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     title.paragraph_format.space_after = Pt(4)
     title.paragraph_format.keep_with_next = True
     run = title.add_run(identity["fund_display_name"])
-    _set_run_font(run, size=25, bold=True, color=colour)
+    _set_run_font(run, size=25, bold=True, color=colour, east_asia=cjk_font)
     subtitle = document.add_paragraph()
     subtitle.paragraph_format.space_after = Pt(4)
     subtitle.paragraph_format.keep_with_next = True
-    run = subtitle.add_run(str(identity["period_label_en"]))
-    _set_run_font(run, size=15, bold=True, color=RGBColor(55, 70, 85))
+    run = subtitle.add_run(str(identity["period_label"]))
+    _set_run_font(run, size=15, bold=True, color=RGBColor(55, 70, 85), east_asia=cjk_font)
     for line in (fund["professional_statement"], fund["date_statement"]):
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.space_after = Pt(1)
         run = paragraph.add_run(str(line))
-        _set_run_font(run, size=9.5, color=RGBColor(75, 85, 95))
+        _set_run_font(run, size=9.5, color=RGBColor(75, 85, 95), east_asia=cjk_font)
     rule = document.add_paragraph()
     rule.paragraph_format.space_after = Pt(12)
     p_pr = rule._p.get_or_add_pPr()
@@ -607,17 +780,17 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     p_bdr.append(bottom)
     p_pr.append(p_bdr)
 
-    document.add_heading("Investment Objective", level=1)
+    document.add_heading(copy["investment_objective"], level=1)
     document.add_paragraph(str(fund["investment_objective"]))
-    document.add_heading("Strategy Highlights and Characteristics", level=1)
+    document.add_heading(copy["strategy_highlights"], level=1)
     for strategy in fund["strategies"]:
         document.add_paragraph(str(strategy), style="List Bullet")
 
-    document.add_heading("Fund Performance (Net Quarterly Returns)", level=1)
+    document.add_heading(copy["fund_performance"], level=1)
     matrix = snapshot["calculation"]["quarterly_matrix"]
     performance = document.add_table(rows=1, cols=6)
     performance.style = "Table Grid"
-    headers = ["Year", "Q1", "Q2", "Q3", "Q4", "YTD"]
+    headers = [copy[key] for key in ("year", "q1", "q2", "q3", "q4", "ytd")]
     for cell, label in zip(performance.rows[0].cells, headers, strict=True):
         cell.text = label
     for year, values in sorted(matrix.items()):
@@ -639,29 +812,32 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
             run.font.color.rgb = RGBColor(105, 110, 115)
             run.font.size = Pt(9)
 
-    document.add_heading("Fund Performance (Graph)", level=1)
+    document.add_heading(copy["fund_performance_graph"], level=1)
     document.add_picture(str(chart_path), width=Inches(6.55))
     document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    document.add_heading("Fund Statistics", level=1)
+    document.add_heading(copy["fund_statistics"], level=1)
     metric_labels = [
-        ("Inception Date", share["inception_date"]),
-        ("Return ITD", snapshot["calculation"]["metrics_display"]["itd_return"]),
-        ("Return YTD", snapshot["calculation"]["metrics_display"]["ytd_return"]),
-        ("Annualized Return", snapshot["calculation"]["metrics_display"]["annualized_return"]),
-        ("Positive Months", snapshot["calculation"]["metrics_display"]["positive_months"]),
-        ("Negative Months", snapshot["calculation"]["metrics_display"]["negative_months"]),
+        (copy["inception_date"], share["inception_date"]),
+        (copy["return_itd"], snapshot["calculation"]["metrics_display"]["itd_return"]),
+        (copy["return_ytd"], snapshot["calculation"]["metrics_display"]["ytd_return"]),
         (
-            "Annualized Volatility",
+            copy["annualized_return"],
+            snapshot["calculation"]["metrics_display"]["annualized_return"],
+        ),
+        (copy["positive_months"], snapshot["calculation"]["metrics_display"]["positive_months"]),
+        (copy["negative_months"], snapshot["calculation"]["metrics_display"]["negative_months"]),
+        (
+            copy["annualized_volatility"],
             snapshot["calculation"]["metrics_display"]["annualized_volatility"],
         ),
-        ("Maximum Drawdown", snapshot["calculation"]["metrics_display"]["maximum_drawdown"]),
-        ("Sharpe Ratio", snapshot["calculation"]["metrics_display"]["sharpe_ratio"]),
+        (copy["maximum_drawdown"], snapshot["calculation"]["metrics_display"]["maximum_drawdown"]),
+        (copy["sharpe_ratio"], snapshot["calculation"]["metrics_display"]["sharpe_ratio"]),
     ]
     stats = document.add_table(rows=1, cols=2)
     stats.style = "Table Grid"
-    stats.rows[0].cells[0].text = "Statistic"
-    stats.rows[0].cells[1].text = "Value"
+    stats.rows[0].cells[0].text = copy["statistic"]
+    stats.rows[0].cells[1].text = copy["value"]
     for label, value in metric_labels:
         row = stats.add_row().cells
         row[0].text = str(label)
@@ -670,7 +846,7 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     _repeat_header(stats.rows[0])
     _style_table_text(stats)
 
-    document.add_heading("Manager Commentary", level=1)
+    document.add_heading(copy["manager_commentary"], level=1)
     if snapshot["commentary"]["title"]:
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.keep_with_next = True
@@ -686,19 +862,19 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
         run.italic = True
 
     document.add_page_break()
-    document.add_heading("General Information", level=1)
+    document.add_heading(copy["general_information"], level=1)
     general_rows = [
-        ("Structure", fund["structure"]),
-        ("Domicile", fund["domicile"]),
-        ("Currency", share["currency"]),
-        ("Return Basis", share["return_basis"].title()),
-        *[(row["label"], row["value"]) for row in fund["parties"]],
-        *[(row["label"], row["value"]) for row in fund["terms"]],
+        (copy["structure"], fund["structure"]),
+        (copy["domicile"], fund["domicile"]),
+        (copy["currency"], share["currency"]),
+        (copy[share["return_basis"].lower()], share["return_basis"].title()),
+        *[(_localized_report_label(row["label"], copy), row["value"]) for row in fund["parties"]],
+        *[(_localized_report_label(row["label"], copy), row["value"]) for row in fund["terms"]],
     ]
     general = document.add_table(rows=1, cols=2)
     general.style = "Table Grid"
-    general.rows[0].cells[0].text = "Item"
-    general.rows[0].cells[1].text = "Details"
+    general.rows[0].cells[0].text = copy["item"]
+    general.rows[0].cells[1].text = copy["details"]
     for label, value in general_rows:
         row = general.add_row().cells
         row[0].text = str(label)
@@ -707,22 +883,22 @@ def build_builtin_docx(snapshot: dict[str, object], chart_path: Path, output_pat
     _repeat_header(general.rows[0])
     _style_table_text(general)
 
-    document.add_heading("Contacts", level=1)
+    document.add_heading(copy["contacts"], level=1)
     contacts = document.add_table(rows=1, cols=2)
     contacts.style = "Table Grid"
-    contacts.rows[0].cells[0].text = "Contact"
-    contacts.rows[0].cells[1].text = "Details"
+    contacts.rows[0].cells[0].text = copy["contact"]
+    contacts.rows[0].cells[1].text = copy["details"]
     for contact in fund["contacts"]:
         details = [contact["name"], contact["email"], contact["phone"], contact["address"]]
         row = contacts.add_row().cells
-        row[0].text = str(contact["role"])
+        row[0].text = _localized_report_label(contact["role"], copy)
         row[1].text = "\n".join(str(value) for value in details if value)
     _set_table_geometry(contacts, [3000, 6864])
     _repeat_header(contacts.rows[0])
     _style_table_text(contacts)
 
     document.add_page_break()
-    document.add_heading("Disclaimer", level=1)
+    document.add_heading(copy["disclaimer"], level=1)
     for paragraph_text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if paragraph_text.strip():
             document.add_paragraph(paragraph_text.strip(), style="Disclaimer")

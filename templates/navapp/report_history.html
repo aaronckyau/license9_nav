@@ -14,6 +14,7 @@
   <form method="post" action="{% url 'report-create' %}" class="report-period-form">{% csrf_token %}
     <div class="field">{{ period_form.share_class.label_tag }}{{ period_form.share_class }}{{ period_form.share_class.errors }}</div>
     <div class="field">{{ period_form.report_type.label_tag }}{{ period_form.report_type }}{{ period_form.report_type.errors }}</div>
+    <div class="field">{{ period_form.report_language.label_tag }}{{ period_form.report_language }}{{ period_form.report_language.errors }}</div>
     <div class="field">{{ period_form.year.label_tag }}{{ period_form.year }}{{ period_form.year.errors }}</div>
     <div class="field"><label id="report-period-label" for="{{ period_form.month.id_for_label }}">截止月份：</label>{{ period_form.month }}{{ period_form.month.errors }}</div>
     <button class="button primary" type="submit">選擇並填寫評論</button>
