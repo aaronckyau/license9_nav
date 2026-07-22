@@ -834,11 +834,11 @@ def _add_boya_monthly_performance(document: Document, snapshot: dict[str, object
     _style_table_text(table, "SimSun", "F2F2F2")
     for cell in table.rows[0].cells:
         for run in cell.paragraphs[0].runs:
-            _set_boya_run_font(run, size=8.5, bold=True)
+            _set_boya_run_font(run, size=7.2, bold=True)
     for row in table.rows[1:]:
         for cell in row.cells:
             for run in cell.paragraphs[0].runs:
-                _set_boya_run_font(run, size=8.5)
+                _set_boya_run_font(run, size=7)
 
 
 def _add_boya_statistics(document: Document, snapshot: dict[str, object]) -> None:
@@ -963,6 +963,7 @@ def build_boya_reference_docx(
     document.add_heading("Fund Performance (Graph)", level=1)
     document.add_picture(str(chart_path), width=Inches(7.05))
     document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    document.add_page_break()
     _add_boya_statistics(document, snapshot)
 
     document.add_heading("Manager Commentary", level=1)
