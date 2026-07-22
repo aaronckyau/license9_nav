@@ -1037,8 +1037,8 @@ def build_boya_reference_docx(
             for run in cell.paragraphs[0].runs:
                 _set_boya_run_font(run, size=8.5)
 
-    document.add_page_break()
-    document.add_heading("Disclaimer:", level=1)
+    disclaimer_heading = document.add_heading("Disclaimer:", level=1)
+    disclaimer_heading.paragraph_format.page_break_before = True
     for text in str(fund["disclaimer"]).replace("\r\n", "\n").split("\n\n"):
         if text.strip():
             paragraph = document.add_paragraph(style="Boya Disclaimer")
