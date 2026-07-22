@@ -1,11 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">步驟 1 · 基金設定</p><h1>{% if fund.pk %}編輯 {{ fund.display_name }}{% else %}建立基金{% endif %}</h1><p class="muted">設定基金識別資料、報告繼承規則、條款、相關機構、聯絡資料及策略內容。</p></div>{% if fund.pk %}<a class="button secondary" href="{% url 'share-class-create' fund.pk %}">新增股份類別</a>{% endif %}</div>
-<form method="post" enctype="multipart/form-data" class="stack-form">{% csrf_token %}
-  <section class="panel"><h2>基金識別、品牌及法律內容</h2>{{ form.non_field_errors }}<div class="form-grid">{% for field in form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}field-check{% endif %}">{{ field.label_tag }}{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div></section>
-  {% for group in formsets %}
-  <section class="panel"><h2>{{ group.label }}</h2>{{ group.formset.management_form }}{{ group.formset.non_form_errors }}<div class="formset-grid">{% for child in group.formset %}<div class="formset-row">{{ child.id }}{% for field in child.visible_fields %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}field-check{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div>{% endfor %}</div></section>
-  {% endfor %}
-  <div class="sticky-actions"><button class="button primary" type="submit">儲存基金</button><a class="button ghost" href="{% url 'fund-list' %}">取消</a></div>
+<div class="page-heading"><div><p class="eyebrow">步驟 1 · 基金設定</p><h1>{% if fund.pk %}編輯 {{ fund.display_name }}{% else %}建立基金{% endif %}</h1><p class="muted">只需填寫基金基本資料、聯絡人、投資內容及免責聲明。</p></div></div>
+<form method="post" class="stack-form">{% csrf_token %}
+  {{ form.non_field_errors }}
+  <section class="panel"><h2>基本資料</h2><div class="table-wrap"><table class="settings-table"><tbody>
+    <tr><th>{{ form.fund_name.label_tag }}</th><td>{{ form.fund_name }}{{ form.fund_name.errors }}</td><th>{{ form.structure.label_tag }}</th><td>{{ form.structure }}{{ form.structure.errors }}</td></tr>
+    <tr><th>{{ form.domicile.label_tag }}</th><td>{{ form.domicile }}{{ form.domicile.errors }}</td><th>{{ form.currency.label_tag }}</th><td>{{ form.currency }}{{ form.currency.errors }}</td></tr>
+    <tr><th>{{ form.return_basis.label_tag }}</th><td>{{ form.return_basis }}{{ form.return_basis.errors }}</td><th>{{ form.portfolio_manager.label_tag }}</th><td>{{ form.portfolio_manager }}{{ form.portfolio_manager.errors }}</td></tr>
+    <tr><th>{{ form.general_partner.label_tag }}</th><td>{{ form.general_partner }}{{ form.general_partner.errors }}</td><th>{{ form.investment_manager.label_tag }}</th><td>{{ form.investment_manager }}{{ form.investment_manager.errors }}</td></tr>
+    <tr><th>{{ form.fund_administrator.label_tag }}</th><td>{{ form.fund_administrator }}{{ form.fund_administrator.errors }}</td><th>{{ form.minimum_contribution.label_tag }}</th><td>{{ form.minimum_contribution }}{{ form.minimum_contribution.errors }}</td></tr>
+    <tr><th>{{ form.valuation_frequency.label_tag }}</th><td>{{ form.valuation_frequency }}{{ form.valuation_frequency.errors }}</td><th>{{ form.base_currency.label_tag }}</th><td>{{ form.base_currency }}{{ form.base_currency.errors }}</td></tr>
+    <tr><th>{{ form.bloomberg_code.label_tag }}</th><td>{{ form.bloomberg_code }}{{ form.bloomberg_code.errors }}</td><th>{{ form.year_end_date.label_tag }}</th><td>{{ form.year_end_date }}{{ form.year_end_date.errors }}<small>{{ form.year_end_date.help_text }}</small></td></tr>
+    <tr><th>{{ form.management_fee.label_tag }}</th><td>{{ form.management_fee }}{{ form.management_fee.errors }}</td><th>{{ form.lock_up_period.label_tag }}</th><td>{{ form.lock_up_period }}{{ form.lock_up_period.errors }}</td></tr>
+    <tr><th>{{ form.carried_interest.label_tag }}</th><td colspan="3">{{ form.carried_interest }}{{ form.carried_interest.errors }}</td></tr>
+  </tbody></table></div></section>
+  <section class="panel"><h2>聯絡資料</h2><p class="muted">Portfolio Manager</p><div class="form-grid"><div class="field">{{ form.portfolio_manager_name.label_tag }}{{ form.portfolio_manager_name }}{{ form.portfolio_manager_name.errors }}</div><div class="field">{{ form.portfolio_manager_contact.label_tag }}{{ form.portfolio_manager_contact }}{{ form.portfolio_manager_contact.errors }}</div></div></section>
+  <section class="panel"><h2>{{ form.investment_objective.label }}</h2><div class="field">{{ form.investment_objective }}{{ form.investment_objective.errors }}</div></section>
+  <section class="panel"><h2>{{ form.strategy_highlights.label }}</h2><div class="field">{{ form.strategy_highlights }}<small>{{ form.strategy_highlights.help_text }}</small>{{ form.strategy_highlights.errors }}</div></section>
+  <section class="panel"><h2>{{ form.disclaimer.label }}</h2><div class="field">{{ form.disclaimer }}{{ form.disclaimer.errors }}</div></section>
+  <div class="sticky-actions"><button class="button primary" type="submit">儲存基金設定</button><a class="button ghost" href="{% url 'fund-list' %}">取消</a></div>
 </form>
 {% endblock %}

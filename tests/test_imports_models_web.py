@@ -975,36 +975,62 @@ def test_full_authenticated_web_workflow_and_fund_isolation(
     user = get_user_model().objects.create_user("operator", password="safe-password")
     client.force_login(user)
     fund_payload = {
-        "legal_name": "Web Fund LPF",
-        "display_name": "Web Fund",
-        "short_code": "web-fund",
+        "fund_name": "Web Fund",
         "structure": "LPF",
         "domicile": "Hong Kong",
-        "year_end_month": "12",
-        "year_end_day": "31",
-        "report_language": "en",
-        "is_active": "on",
+        "currency": "USD",
+        "return_basis": "NET",
+        "portfolio_manager": "Portfolio Manager Ltd",
+        "general_partner": "General Partner Ltd",
+        "investment_manager": "Investment Manager Ltd",
+        "fund_administrator": "Fund Administrator Ltd",
+        "minimum_contribution": "USD 100,000",
+        "valuation_frequency": "Monthly",
+        "base_currency": "USD",
+        "bloomberg_code": "WEB LP",
+        "year_end_date": "12-31",
+        "management_fee": "1.5%",
+        "lock_up_period": "12 months",
+        "carried_interest": "20%",
+        "portfolio_manager_name": "Jane Doe",
+        "portfolio_manager_contact": "+852 1234 5678",
         "investment_objective": "Web-created objective",
-        "use_org_professional_statement": "on",
-        "use_org_date_statement": "on",
-        "use_org_disclaimer": "on",
-        "strategies-TOTAL_FORMS": "1",
-        "strategies-INITIAL_FORMS": "0",
-        "strategies-MIN_NUM_FORMS": "1",
-        "strategies-MAX_NUM_FORMS": "1000",
-        "strategies-0-text": "Disciplined strategy",
-        "strategies-0-sort_order": "0",
+        "strategy_highlights": "Disciplined strategy\nRisk-managed allocation",
+        "disclaimer": "Web fund disclaimer.",
     }
-    for prefix in ("parties", "terms", "contacts"):
-        fund_payload |= {
-            f"{prefix}-TOTAL_FORMS": "0",
-            f"{prefix}-INITIAL_FORMS": "0",
-            f"{prefix}-MIN_NUM_FORMS": "0",
-            f"{prefix}-MAX_NUM_FORMS": "1000",
-        }
     response = client.post(reverse("fund-create"), fund_payload)
     assert response.status_code == 302
     fund = Fund.objects.get(short_code="web-fund")
+    assert fund.legal_name == "Web Fund"
+    assert fund.disclaimer_override == "Web fund disclaimer."
+    assert fund.parties.get(party_type="PORTFOLIO_MANAGER").value == "Portfolio Manager Ltd"
+    assert fund.terms.get(key="management-fee").value_text == "1.5%"
+    assert fund.contacts.get(role="Portfolio Manager").phone == "+852 1234 5678"
+    assert list(fund.strategy_highlights.values_list("text", flat=True)) == [
+        "Disciplined strategy",
+        "Risk-managed allocation",
+    ]
+    settings_page = client.get(reverse("fund-edit", args=[fund.pk]))
+    settings_content = settings_page.content.decode()
+    assert settings_page.status_code == 200
+    assert "Fund Name" in settings_content
+    assert "Strategy Highlights and Characteristics" in settings_content
+    assert "自訂 DOCX 範本" not in settings_content
+    assert "基金代碼" not in settings_content
+    response = client.post(
+        reverse("fund-edit", args=[fund.pk]),
+        {
+            **fund_payload,
+            "management_fee": "2.0%",
+            "portfolio_manager_contact": "+852 9876 5432",
+            "strategy_highlights": "Updated strategy",
+        },
+    )
+    assert response.status_code == 302
+    fund.refresh_from_db()
+    assert fund.terms.get(key="management-fee").value_text == "2.0%"
+    assert fund.contacts.get(role="Portfolio Manager").phone == "+852 9876 5432"
+    assert list(fund.strategy_highlights.values_list("text", flat=True)) == ["Updated strategy"]
     response = client.post(
         reverse("share-class-create", args=[fund.pk]),
         {

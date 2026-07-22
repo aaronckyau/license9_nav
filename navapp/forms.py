@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.forms import inlineformset_factory
 from django.utils import timezone
+from django.utils.text import slugify
 
 from navapp.models import (
     Contact,
@@ -193,6 +194,210 @@ class FundForm(forms.ModelForm):
         if 'targetmode="external"' in lower and (".xlsx" in lower or "oleobject" in lower):
             raise forms.ValidationError("不允許外部 Excel 關聯。")
         return uploaded
+
+
+SIMPLE_FUND_PARTIES = (
+    ("portfolio_manager", "PORTFOLIO_MANAGER", "Portfolio Manager"),
+    ("general_partner", "GENERAL_PARTNER", "General Partner"),
+    ("investment_manager", "INVESTMENT_MANAGER", "Investment Manager"),
+    ("fund_administrator", "ADMINISTRATOR", "Fund Administrator"),
+)
+
+SIMPLE_FUND_TERMS = (
+    ("currency", "currency", "Currency"),
+    ("return_basis", "return-basis", "Return Basis"),
+    ("minimum_contribution", "minimum-contribution", "Minimum Contribution"),
+    ("valuation_frequency", "valuation-frequency", "Valuation Frequency"),
+    ("base_currency", "base-currency", "Base Currency"),
+    ("bloomberg_code", "bloomberg-code", "Bloomberg Code"),
+    ("management_fee", "management-fee", "Management Fee"),
+    ("lock_up_period", "lock-up-period", "Lock-up Period"),
+    ("carried_interest", "carried-interest", "Carried Interest"),
+)
+
+
+class SimpleFundSettingsForm(forms.Form):
+    fund_name = forms.CharField(label="Fund Name", max_length=255)
+    structure = forms.CharField(label="Structure", max_length=255)
+    domicile = forms.CharField(label="Domicile", max_length=120)
+    currency = forms.CharField(label="Currency", max_length=255, required=False)
+    return_basis = forms.ChoiceField(
+        label="Return Basis",
+        choices=(("", "—"), ("NET", "扣除費用後"), ("GROSS", "扣除費用前")),
+        required=False,
+    )
+    portfolio_manager = forms.CharField(label="Portfolio Manager", max_length=255, required=False)
+    general_partner = forms.CharField(label="General Partner", max_length=255, required=False)
+    investment_manager = forms.CharField(label="Investment Manager", max_length=255, required=False)
+    fund_administrator = forms.CharField(label="Fund Administrator", max_length=255, required=False)
+    minimum_contribution = forms.CharField(
+        label="Minimum Contribution", max_length=255, required=False
+    )
+    valuation_frequency = forms.CharField(
+        label="Valuation Frequency", max_length=255, required=False
+    )
+    base_currency = forms.CharField(label="Base Currency", max_length=255, required=False)
+    bloomberg_code = forms.CharField(label="Bloomberg Code", max_length=255, required=False)
+    year_end_date = forms.CharField(
+        label="Year End Date",
+        max_length=10,
+        help_text="使用 MM-DD，例如 12-31。",
+    )
+    management_fee = forms.CharField(label="Management Fee", max_length=255, required=False)
+    lock_up_period = forms.CharField(label="Lock-up Period", max_length=255, required=False)
+    carried_interest = forms.CharField(label="Carried Interest", max_length=255, required=False)
+    portfolio_manager_name = forms.CharField(label="Name", max_length=150, required=False)
+    portfolio_manager_contact = forms.CharField(label="Contact", max_length=80, required=False)
+    investment_objective = forms.CharField(
+        label="Investment Objective",
+        widget=forms.Textarea(attrs={"rows": 5}),
+    )
+    strategy_highlights = forms.CharField(
+        label="Strategy Highlights and Characteristics",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 6}),
+        help_text="每行一項策略重點。",
+    )
+    disclaimer = forms.CharField(label="Disclaimer", widget=forms.Textarea(attrs={"rows": 8}))
+
+    def __init__(self, *args, instance: Fund | None = None, **kwargs):
+        self.instance = instance or Fund()
+        super().__init__(*args, **kwargs)
+        if self.is_bound:
+            return
+        parties = {item.party_type: item.value for item in self.instance.parties.all()}
+        terms = {item.key: item.value_text for item in self.instance.terms.all()}
+        contact = self.instance.contacts.filter(role="Portfolio Manager").first()
+        self.initial.update(
+            {
+                "fund_name": self.instance.display_name,
+                "structure": self.instance.structure,
+                "domicile": self.instance.domicile,
+                "year_end_date": f"{self.instance.year_end_month:02d}-{self.instance.year_end_day:02d}",
+                "investment_objective": self.instance.investment_objective,
+                "strategy_highlights": "\n".join(
+                    item.text for item in self.instance.strategy_highlights.all()
+                ),
+                "disclaimer": self.instance.resolved()["disclaimer"],
+                "portfolio_manager_name": contact.name if contact else "",
+                "portfolio_manager_contact": contact.phone if contact else "",
+                **{
+                    field_name: parties.get(party_type, "")
+                    for field_name, party_type, _ in SIMPLE_FUND_PARTIES
+                },
+                **{field_name: terms.get(key, "") for field_name, key, _ in SIMPLE_FUND_TERMS},
+            }
+        )
+
+    def clean_year_end_date(self):
+        value = self.cleaned_data["year_end_date"].strip()
+        match = re.fullmatch(r"(?:(?:\d{4})-)?(\d{1,2})-(\d{1,2})", value)
+        if not match:
+            raise forms.ValidationError("請使用 MM-DD，例如 12-31。")
+        month, day = (int(part) for part in match.groups())
+        try:
+            date(2024, month, day)
+        except ValueError as exc:
+            raise forms.ValidationError("Year End Date 無效。") from exc
+        return month, day
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("portfolio_manager_contact") and not cleaned.get("portfolio_manager_name"):
+            self.add_error("portfolio_manager_name", "填寫 Contact 時，必須同時填寫 Name。")
+        return cleaned
+
+    def _short_code(self, fund_name: str) -> str:
+        base = slugify(fund_name)[:30] or "fund"
+        candidate = base
+        suffix = 2
+        while Fund.objects.exclude(pk=self.instance.pk).filter(short_code=candidate).exists():
+            suffix_text = f"-{suffix}"
+            candidate = f"{base[: 30 - len(suffix_text)]}{suffix_text}"
+            suffix += 1
+        return candidate
+
+    def save(self) -> Fund:
+        fund = self.instance
+        fund_name = self.cleaned_data["fund_name"].strip()
+        fund.legal_name = fund_name
+        fund.display_name = fund_name
+        if not fund.pk:
+            fund.short_code = self._short_code(fund_name)
+        fund.structure = self.cleaned_data["structure"].strip()
+        fund.domicile = self.cleaned_data["domicile"].strip()
+        fund.year_end_month, fund.year_end_day = self.cleaned_data["year_end_date"]
+        fund.investment_objective = self.cleaned_data["investment_objective"].strip()
+        fund.use_org_disclaimer = False
+        fund.disclaimer_override = self.cleaned_data["disclaimer"].strip()
+        fund.full_clean()
+        fund.save()
+
+        for field_name, party_type, label in SIMPLE_FUND_PARTIES:
+            value = self.cleaned_data[field_name].strip()
+            item = fund.parties.filter(party_type=party_type).first()
+            if value:
+                FundParty.objects.update_or_create(
+                    pk=item.pk if item else None,
+                    defaults={
+                        "fund": fund,
+                        "party_type": party_type,
+                        "display_label": label,
+                        "value": value,
+                        "sort_order": list(SIMPLE_FUND_PARTIES).index(
+                            (field_name, party_type, label)
+                        ),
+                    },
+                )
+            elif item:
+                item.delete()
+
+        for field_name, key, label in SIMPLE_FUND_TERMS:
+            value = self.cleaned_data[field_name].strip()
+            if value:
+                FundTerm.objects.update_or_create(
+                    fund=fund,
+                    key=key,
+                    defaults={
+                        "display_label": label,
+                        "value_text": value,
+                        "display_in_report": True,
+                        "sort_order": list(SIMPLE_FUND_TERMS).index((field_name, key, label)),
+                    },
+                )
+            else:
+                fund.terms.filter(key=key).delete()
+
+        contact = fund.contacts.filter(role="Portfolio Manager").first()
+        name = self.cleaned_data["portfolio_manager_name"].strip()
+        contact_value = self.cleaned_data["portfolio_manager_contact"].strip()
+        if name or contact_value:
+            Contact.objects.update_or_create(
+                pk=contact.pk if contact else None,
+                defaults={
+                    "fund": fund,
+                    "role": "Portfolio Manager",
+                    "name": name,
+                    "phone": contact_value,
+                    "display_in_report": True,
+                    "sort_order": 0,
+                },
+            )
+        elif contact:
+            contact.delete()
+
+        fund.strategy_highlights.all().delete()
+        FundStrategyHighlight.objects.bulk_create(
+            [
+                FundStrategyHighlight(fund=fund, text=text, sort_order=index)
+                for index, text in enumerate(
+                    line.strip()
+                    for line in self.cleaned_data["strategy_highlights"].splitlines()
+                    if line.strip()
+                )
+            ]
+        )
+        return fund
 
 
 StrategyFormSet = inlineformset_factory(

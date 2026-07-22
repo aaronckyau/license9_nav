@@ -1,5 +1,11 @@
 # Implementation Status
 
+## 2026-07-22 基金設定簡化（本機驗證完成，待發佈）
+
+- 一般基金設定頁已縮減為指定的基本資料表格、Portfolio Manager 的 Name／Contact、Investment Objective、Strategy Highlights and Characteristics 及 Disclaimer。
+- 相關機構、條款、聯絡人與策略資料仍使用既有資料模型保存，確保現有報表、稽核、資料匯入及 Django Admin 不受影響；一般頁不再顯示品牌、DOCX 範本、報告繼承規則或可任意增列的 formset。
+- 本機已通過 `pytest`（`53 passed, 1 skipped`）、Ruff format/check、Django system check 與 migration check。
+
 ## 2026-07-21 月報與季報版面一致化（本機驗證完成，待發佈）
 
 - 月報 DOCX 與 HTML 預覽的「基金表現」已改為與季報相同的年度／Q1–Q4／YTD 績效矩陣；報告標題和截止日期仍保留月報語意，資料只計至所選月報截止日。

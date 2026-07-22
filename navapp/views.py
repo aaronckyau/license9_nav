@@ -20,18 +20,14 @@ from django.views.decorators.http import require_GET, require_POST
 from navapp.forms import (
     BulkImportForm,
     CommentaryForm,
-    ContactFormSet,
-    FundForm,
     InlineNAVUpdateForm,
     ManualRFRForm,
     OrganizationSettingsForm,
-    PartyFormSet,
     ReportCreateForm,
     ReportHistoryCommentaryForm,
     ShareClassForm,
     SimpleEntryForm,
-    StrategyFormSet,
-    TermFormSet,
+    SimpleFundSettingsForm,
     latest_completed_month,
 )
 from navapp.models import (
@@ -123,26 +119,12 @@ def fund_list(request):
 @login_required
 def fund_edit(request, pk=None):
     instance = get_object_or_404(Fund, pk=pk) if pk else Fund()
-    formsets = [
-        ("strategies", "策略重點", StrategyFormSet),
-        ("parties", "基金相關機構", PartyFormSet),
-        ("terms", "基金條款", TermFormSet),
-        ("contacts", "報告聯絡資料", ContactFormSet),
-    ]
     if request.method == "POST":
-        form = FundForm(request.POST, request.FILES, instance=instance)
-        bound = [
-            (label, factory(request.POST, instance=instance, prefix=prefix))
-            for prefix, label, factory in formsets
-        ]
-        if form.is_valid() and all(item.is_valid() for _, item in bound):
+        form = SimpleFundSettingsForm(request.POST, instance=instance)
+        if form.is_valid():
             changed_fields = list(form.changed_data)
-            related_changed = [item.prefix for _, item in bound if item.has_changed()]
             with transaction.atomic():
                 fund = form.save()
-                for _, item in bound:
-                    item.instance = fund
-                    item.save()
                 AuditLog.objects.create(
                     actor=request.user,
                     entity_type="Fund",
@@ -152,14 +134,13 @@ def fund_edit(request, pk=None):
                         "short_code": fund.short_code,
                         "display_name": fund.display_name,
                         "changed_fields": changed_fields,
-                        "related_changed": related_changed,
                     },
                 )
-                if pk and (changed_fields or related_changed):
+                if pk and changed_fields:
                     stale_count = mark_fund_reports_stale(
                         fund,
                         request.user,
-                        "基金設定已變更：" + "、".join(changed_fields + related_changed),
+                        "基金設定已變更：" + "、".join(changed_fields),
                     )
                     if stale_count:
                         messages.warning(
@@ -169,18 +150,13 @@ def fund_edit(request, pk=None):
             messages.success(request, "基金設定已儲存。")
             return redirect("fund-edit", pk=fund.pk)
     else:
-        form = FundForm(instance=instance)
-        bound = [
-            (label, factory(instance=instance, prefix=prefix))
-            for prefix, label, factory in formsets
-        ]
+        form = SimpleFundSettingsForm(instance=instance)
     return render(
         request,
         "navapp/fund_form.html",
         {
             "form": form,
             "fund": instance,
-            "formsets": [{"label": label, "formset": formset} for label, formset in bound],
         },
     )
 
