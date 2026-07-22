@@ -462,6 +462,17 @@ def build_current_snapshot(report: QuarterlyReport) -> dict[str, object]:
     }
 
 
+def _nav_chart_tick_interval(point_count: int) -> int:
+    """Return a readable monthly tick cadence for a NAV history chart."""
+    if point_count <= 18:
+        return 1
+    if point_count <= 36:
+        return 2
+    if point_count <= 72:
+        return 3
+    return 6
+
+
 def generate_nav_chart(snapshot: dict[str, object], output_path: Path) -> None:
     monthly = snapshot["calculation"]["monthly"]
     dates = [datetime.fromisoformat(row["valuation_month"]) for row in monthly]
@@ -490,7 +501,7 @@ def generate_nav_chart(snapshot: dict[str, object], output_path: Path) -> None:
         axis.grid(axis="y", color="#DCE3EA", linewidth=0.7)
         axis.spines[["top", "right"]].set_visible(False)
         axis.spines[["left", "bottom"]].set_color("#9AA8B6")
-        interval = 3 if len(dates) <= 36 else 6
+        interval = _nav_chart_tick_interval(len(dates))
         axis.xaxis.set_major_locator(mdates.MonthLocator(interval=interval))
         axis.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
         fig.autofmt_xdate(rotation=35, ha="right")

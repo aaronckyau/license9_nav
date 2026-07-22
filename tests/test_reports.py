@@ -44,6 +44,14 @@ from navapp.services.reports import (
 from navapp.services.rfr import set_manual_snapshot
 
 
+@pytest.mark.parametrize(
+    ("point_count", "expected_interval"),
+    [(1, 1), (18, 1), (19, 2), (36, 2), (37, 3), (72, 3), (73, 6)],
+)
+def test_nav_chart_tick_interval_adapts_to_history_length(point_count, expected_interval):
+    assert reports._nav_chart_tick_interval(point_count) == expected_interval
+
+
 @pytest.fixture
 def report_fixture(db, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path / "media"
