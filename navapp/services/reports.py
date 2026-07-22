@@ -947,6 +947,8 @@ def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
     if not binary:
         raise ReportGenerationError(f"找不到 LibreOffice 執行檔 {settings.LIBREOFFICE_BINARY!r}。")
     output_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = output_dir / f"{docx_path.stem}.pdf"
+    pdf_path.unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(prefix="nav-lo-profile-") as profile:
         profile_uri = Path(profile).resolve().as_uri()
         command = [
@@ -969,7 +971,6 @@ def convert_docx_to_pdf(docx_path: Path, output_dir: Path) -> Path:
             )
         except subprocess.TimeoutExpired as exc:
             raise ReportGenerationError("LibreOffice PDF 轉換逾時。") from exc
-    pdf_path = output_dir / f"{docx_path.stem}.pdf"
     if result.returncode != 0 or not pdf_path.exists() or pdf_path.stat().st_size == 0:
         raise ReportGenerationError(
             "LibreOffice PDF 轉換失敗："

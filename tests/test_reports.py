@@ -5,6 +5,7 @@ import shutil
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 import pytest
@@ -315,6 +316,27 @@ def test_builtin_docx_sets_the_selected_cjk_font_on_user_commentary(report_fixtu
     paragraph = next(item for item in document.paragraphs if "简体中文评论" in item.text)
 
     assert paragraph.runs[0]._element.rPr.rFonts.get(qn("w:eastAsia")) == "Noto Sans CJK SC"
+
+
+def test_pdf_conversion_replaces_an_existing_pdf(monkeypatch, settings, tmp_path):
+    docx = tmp_path / "report.docx"
+    output_dir = tmp_path / "output"
+    pdf = output_dir / "report.pdf"
+    docx.write_bytes(b"new docx")
+    output_dir.mkdir()
+    pdf.write_bytes(b"stale pdf")
+
+    monkeypatch.setattr(reports.shutil, "which", lambda _: "soffice")
+
+    def fake_run(*args, **kwargs):
+        assert not pdf.exists()
+        pdf.write_bytes(b"new pdf")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(reports.subprocess, "run", fake_run)
+
+    assert reports.convert_docx_to_pdf(docx, output_dir) == pdf
+    assert pdf.read_bytes() == b"new pdf"
 
 
 @pytest.mark.django_db
