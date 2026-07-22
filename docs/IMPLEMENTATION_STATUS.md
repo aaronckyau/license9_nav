@@ -1,9 +1,10 @@
 # Implementation Status
 
-## 2026-07-22 中文報告文字（本機驗證完成，待發佈）
+## 2026-07-22 中文報告文字（已發佈）
 
 - 報告建立頁加入繁體中文／簡體中文選擇；內建 DOCX 與 NAV 圖表使用相應 CJK 字型及系統固定文字，使用者原文內容不會被自動翻譯。
 - 已通過繁體／簡體內建 DOCX 回歸測試、完整 pytest、Ruff、Django system check 及 migration check；本機沒有 Noto CJK／LibreOffice，圖表文字在本機安全退回英文軸標籤，production Docker image 會安裝 Noto CJK。
+- 功能 commit `9fdbe0a` 已推送至 GitHub `main` 並部署至 Contabo production；資料庫及媒體已於部署前備份，migration、CJK 字型、LibreOffice DOCX/PDF smoke、繁體 DOCX 固定文字及 public `healthz`／`readyz`／登入頁均通過。
 
 ## 2026-07-22 基金設定簡化（本機驗證完成，待發佈）
 
