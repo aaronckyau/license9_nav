@@ -1,9 +1,9 @@
 # Implementation Status
 
-## 2026-07-22 Boya 原稿樣式與內嵌 NAV 圖（進行中）
+## 2026-07-22 Boya 原稿樣式與內嵌 NAV 圖（已完成）
 
 - 依使用者提供的 2026-05 原始月報建立 Boya 專用報告樣式：Times New Roman／宋體、A4 0.5-inch margins、月度回報表、基金統計、評論、一般資料與免責聲明。
-- 原稿的 Word 原生圖表具有外部 Excel/OLE 關聯；系統將以動態產生的內嵌 NAV PNG 取代，並在重新產生、DOCX package audit 與 production PDF 視覺檢查後完成發布。
+- 原稿的 Word 原生圖表具有外部 Excel/OLE 關聯；系統已改以動態產生的內嵌 NAV PNG 取代，並重新產生 Boya 的 2026-05 月報、2026 Q2 季報及 2026-06 月報。三份 DOCX package audit 均通過（兩張內嵌媒體、零外部 Excel 關聯），production LibreOffice PDF 已逐頁檢查。
 
 ## 2026-07-22 報告頁基金範圍化（本機驗證完成）
 
