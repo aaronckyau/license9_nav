@@ -1065,6 +1065,17 @@ def test_report_history_shows_latest_period_once_and_hides_advanced_links(
 
 
 @pytest.mark.django_db
+def test_fund_create_page_renders_for_an_unsaved_fund(client):
+    user = get_user_model().objects.create_user("fund-creator", password="safe-password")
+    client.force_login(user)
+
+    response = client.get(reverse("fund-create"))
+
+    assert response.status_code == 200
+    assert 'name="fund_name"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_full_authenticated_web_workflow_and_fund_isolation(
     client, settings, tmp_path, monkeypatch
 ):

@@ -265,9 +265,16 @@ class SimpleFundSettingsForm(forms.Form):
         super().__init__(*args, **kwargs)
         if self.is_bound:
             return
-        parties = {item.party_type: item.value for item in self.instance.parties.all()}
-        terms = {item.key: item.value_text for item in self.instance.terms.all()}
-        contact = self.instance.contacts.filter(role="Portfolio Manager").first()
+        if self.instance.pk:
+            parties = {item.party_type: item.value for item in self.instance.parties.all()}
+            terms = {item.key: item.value_text for item in self.instance.terms.all()}
+            contact = self.instance.contacts.filter(role="Portfolio Manager").first()
+            strategy_highlights = [item.text for item in self.instance.strategy_highlights.all()]
+        else:
+            parties = {}
+            terms = {}
+            contact = None
+            strategy_highlights = []
         self.initial.update(
             {
                 "fund_name": self.instance.display_name,
@@ -275,9 +282,7 @@ class SimpleFundSettingsForm(forms.Form):
                 "domicile": self.instance.domicile,
                 "year_end_date": f"{self.instance.year_end_month:02d}-{self.instance.year_end_day:02d}",
                 "investment_objective": self.instance.investment_objective,
-                "strategy_highlights": "\n".join(
-                    item.text for item in self.instance.strategy_highlights.all()
-                ),
+                "strategy_highlights": "\n".join(strategy_highlights),
                 "disclaimer": self.instance.resolved()["disclaimer"],
                 "portfolio_manager_name": contact.name if contact else "",
                 "portfolio_manager_contact": contact.phone if contact else "",

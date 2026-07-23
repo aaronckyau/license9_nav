@@ -1,5 +1,11 @@
 # Implementation Status
 
+## 2026-07-23 新增基金頁面修正
+
+- 修正新增基金 GET 頁面初始化未儲存 `Fund` 時存取反向關聯而引發 HTTP 500 的問題。
+- 新基金使用空白 parties、terms、contacts 及 strategy highlights 初始值；既有基金仍載入已儲存設定。
+- 新增 authenticated GET 回歸測試，並保留完整 POST 建立基金流程測試。
+
 ## 2026-07-22 報告圖表月份對齊修正
 
 - 已確認 Boya 2026 年 5 月月報的快照截止日及最後一筆 NAV 均為 `2026-05-31`，未包含 6 月資料。
